@@ -16,6 +16,7 @@ import {
   Sun,
   Moon,
   Sparkles,
+  ExternalLink,
 } from 'lucide-react';
 import BrandLogo from './BrandLogo.jsx';
 
