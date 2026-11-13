@@ -28,6 +28,7 @@ export default function Sidebar({
   onToggleTheme,
   isCollapsed,
   onToggleCollapse,
+  onGoToLanding,
 }) {
   const isAdmin = user?.role === 'admin';
 
@@ -69,6 +70,7 @@ export default function Sidebar({
       items: [
         { id: 'docs', label: 'WordPress Guide', icon: BookOpen },
         { id: 'settings', label: 'Account Settings', icon: Settings },
+        { id: 'landing', label: 'Website Landing Page', icon: ExternalLink },
       ],
     },
   ];
@@ -119,7 +121,13 @@ export default function Sidebar({
               return (
                 <div key={item.id} className="relative group">
                   <button
-                    onClick={() => onSelectTab(item.id)}
+                    onClick={() => {
+                      if (item.id === 'landing' && onGoToLanding) {
+                        onGoToLanding();
+                      } else {
+                        onSelectTab(item.id);
+                      }
+                    }}
                     className={`w-full flex items-center rounded-xl text-xs font-bold transition-all ${
                       isCollapsed ? 'justify-center p-3' : 'px-3 py-2.5 gap-3'
                     } ${

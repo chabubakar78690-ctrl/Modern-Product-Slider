@@ -33,12 +33,24 @@ import Sidebar from './components/Sidebar.jsx';
 import AuthModal from './components/AuthModal.jsx';
 import AdminDashboard from './components/AdminDashboard.jsx';
 import CheckoutModal from './components/CheckoutModal.jsx';
+import LandingPage from './components/LandingPage.jsx';
 
 const SESSION_KEY = 'mps_portal_session_v2';
 const THEME_KEY = 'mps_theme_preference';
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [currentView, setCurrentView] = useState(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const hash = window.location.hash;
+        if (hash === '#dashboard' || hash === '#admin') return 'dashboard';
+      }
+    } catch {
+      // ignore
+    }
+    return 'landing';
+  });
   const [activeTab, setActiveTab] = useState('overview'); // overview | analytics | licenses | domains | plans | transactions | admin | logs | docs | settings
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
@@ -124,6 +136,7 @@ export default function App() {
   const handleAuthCompleted = (authedUser) => {
     saveSession(authedUser);
     setAuthOpen(false);
+    setCurrentView('dashboard');
     if (selectedPlan) {
       setCheckoutPlan(selectedPlan);
       setSelectedPlan(null);
@@ -175,6 +188,51 @@ export default function App() {
 
   const isAdmin = user?.role === 'admin';
 
+  if (currentView === 'landing') {
+    return (
+      <>
+        <LandingPage
+          user={user}
+          onGoToDashboard={() => setCurrentView('dashboard')}
+          onSelectPlan={(planId) => {
+            handleBuyPlan(planId);
+            setCurrentView('dashboard');
+          }}
+          onOpenAuth={(mode) => {
+            setAuthMode(mode);
+            setAuthOpen(true);
+          }}
+          isDark={isDark}
+          onToggleTheme={() => setIsDark(!isDark)}
+        />
+
+        {/* Auth Modal */}
+        <AuthModal
+          isOpen={authOpen}
+          onClose={() => setAuthOpen(false)}
+          initialMode={authMode}
+          selectedPlan={selectedPlan}
+          onSuccess={handleAuthCompleted}
+          isDark={isDark}
+        />
+
+        {/* Full Professional Checkout Modal with Mastercard, Bank Transfer, Google ID & PK Wallets */}
+        <CheckoutModal
+          isOpen={Boolean(checkoutPlan)}
+          onClose={() => setCheckoutPlan(null)}
+          planId={checkoutPlan}
+          user={user}
+          onSuccess={(updatedUser) => {
+            saveSession(updatedUser);
+            setActiveTab('licenses');
+            setCurrentView('dashboard');
+          }}
+          isDark={isDark}
+        />
+      </>
+    );
+  }
+
   return (
     <div
       className={`min-h-screen flex font-sans transition-colors duration-200 ${
@@ -194,6 +252,7 @@ export default function App() {
         onToggleTheme={() => setIsDark(!isDark)}
         isCollapsed={isCollapsed}
         onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
+        onGoToLanding={() => setCurrentView('landing')}
       />
 
       {/* Main Dashboard Layout Container */}
@@ -234,6 +293,18 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Quick Switcher to Landing Page */}
+            <button
+              onClick={() => setCurrentView('landing')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border ${
+                isDark
+                  ? 'border-slate-700/60 bg-[#0A162F] text-slate-300 hover:text-white hover:bg-[#0E2044]'
+                  : 'border-slate-200 bg-slate-50 text-slate-700 hover:text-black hover:bg-slate-100 shadow-sm'
+              }`}
+            >
+              <Globe2 className="w-3.5 h-3.5 text-sky-400" />
+              <span>Landing Page</span>
+            </button>
             {user ? (
               <div className="flex items-center gap-2 text-xs">
                 <span
