@@ -25,6 +25,7 @@ export default function AuthModal({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otpToken, setOtpToken] = useState('');
   const [previewCode, setPreviewCode] = useState('');
   const [emailDelivered, setEmailDelivered] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -121,6 +122,7 @@ export default function AuthModal({
         return;
       }
       setEmailDelivered(Boolean(data.emailDelivered));
+      setOtpToken(data.otpToken || '');
       setPreviewCode(data.previewCode || '');
       setStep('otp');
       setTimeout(() => otpRefs.current[0]?.focus(), 80);
@@ -162,7 +164,7 @@ export default function AuthModal({
       const res = await fetch('/api/v1/auth/verify-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code, name }),
+        body: JSON.stringify({ email, code, name, otpToken }),
       });
       const data = await res.json();
       if (!res.ok) {

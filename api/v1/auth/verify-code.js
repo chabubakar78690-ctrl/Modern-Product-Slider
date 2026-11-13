@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { db } from '../_db.js';
 import {
   applySecurityHeaders,
@@ -5,6 +6,7 @@ import {
   getClientIp,
   timingSafeCompare,
   isValidEmail,
+  verifyOtpToken,
 } from '../_security.js';
 
 export default async function handler(req, res) {
@@ -17,8 +19,8 @@ export default async function handler(req, res) {
 
   const clientIp = getClientIp(req);
 
-  // Rate limit check (max 10 verification attempts per 10 minutes per IP)
-  const allowed = checkRateLimit(`otp_verify_${clientIp}`, 10, 10 * 60 * 1000);
+  // Rate limit check
+  const allowed = checkRateLimit(`otp_verify_${clientIp}`, 15, 10 * 60 * 1000);
   if (!allowed) {
     return res.status(429).json({
       error: 'Too many verification attempts. Please request a new code or try again later.',
@@ -29,60 +31,75 @@ export default async function handler(req, res) {
   const email = String(body.email || '').trim().toLowerCase();
   const code = String(body.code || '').trim();
   const name = String(body.name || '').trim().slice(0, 100);
+  const otpToken = String(body.otpToken || '').trim();
 
   if (!isValidEmail(email) || !code || code.length !== 6) {
     return res.status(400).json({ error: 'Please enter a valid email and 6-digit verification code.' });
   }
 
-  const record = db.otps.get(email);
+  let verified = false;
 
-  if (!record || Date.now() > record.expiresAt) {
-    return res.status(401).json({ error: 'Verification code has expired. Please request a new one.' });
+  // 1. Primary: Verify via stateless cryptographic HMAC OTP token
+  // This guarantees reliable authentication across any Vercel serverless Lambda instance
+  if (otpToken) {
+    const tokenStatus = verifyOtpToken(email, code, otpToken);
+    if (tokenStatus === 'expired') {
+      return res.status(401).json({ error: 'Verification code has expired. Please request a new one.' });
+    }
+    if (tokenStatus === 'valid') {
+      verified = true;
+    }
   }
 
-  // Increment failed attempt counter
-  record.attempts = (record.attempts || 0) + 1;
-  if (record.attempts > 5) {
-    db.otps.delete(email);
-    return res.status(429).json({ error: 'Too many incorrect attempts. This code has been invalidated.' });
+  // 2. Secondary fallback: Check in-memory store
+  if (!verified) {
+    const record = db.otps.get(email);
+    if (record) {
+      if (Date.now() > record.expiresAt) {
+        return res.status(401).json({ error: 'Verification code has expired. Please request a new one.' });
+      }
+      if (timingSafeCompare(record.code, code)) {
+        verified = true;
+      }
+    }
   }
 
-  // Timing-safe comparison to prevent side-channel leakage
-  const matches = timingSafeCompare(record.code, code);
-  if (!matches) {
-    return res.status(401).json({
-      error: `Invalid verification code. (${5 - record.attempts} attempts remaining)`,
-    });
+  if (!verified) {
+    return res.status(401).json({ error: 'Invalid verification code. Please check the code and try again.' });
   }
 
-  // Verification succeeded - clear OTP
+  // Clear in-memory OTP
   db.otps.delete(email);
+
+  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@modernproductslider.com').toLowerCase();
+  const isAdmin = email === adminEmail;
 
   let user = db.users.get(email);
   if (!user) {
-    const adminEmail = (process.env.ADMIN_EMAIL || 'admin@modernproductslider.com').toLowerCase();
     user = {
-      id: 'usr_' + Math.random().toString(36).slice(2, 8),
-      name: name || record.name || email.split('@')[0],
+      id: isAdmin ? 'usr_admin_01' : 'usr_' + Math.random().toString(36).slice(2, 8),
+      name: name || (isAdmin ? 'Founder & Admin' : email.split('@')[0]),
       email,
-      role: email === adminEmail ? 'admin' : 'customer',
+      role: isAdmin ? 'admin' : 'customer',
       provider: 'email',
-      planId: 'free',
-      planName: 'Free Edition ($0/mo)',
-      price: 0,
-      apiKey: '',
-      maxSites: 0,
-      activeSites: [],
+      planId: isAdmin ? 'unlimited' : 'free',
+      planName: isAdmin ? 'Unlimited Sites ($10/mo)' : 'Free Edition ($0/mo)',
+      price: isAdmin ? 10 : 0,
+      apiKey: isAdmin ? 'mps_live_un_admin_' + crypto.randomBytes(8).toString('hex') : '',
+      maxSites: isAdmin ? -1 : 0,
+      activeSites: isAdmin ? ['modern-product-slider.vercel.app'] : [],
       status: 'active',
       createdAt: new Date().toISOString(),
     };
     db.users.set(email, user);
+  } else if (isAdmin) {
+    user.role = 'admin';
   }
 
   db.logs.unshift({
     id: Date.now(),
-    event: 'Email Verified',
-    detail: `${email} authenticated via 6-digit OTP (IP: ${clientIp})`,
+    event: isAdmin ? 'Admin Signed In' : 'Email Verified',
+    detail: `${email} authenticated successfully (IP: ${clientIp})`,
     time: 'Just now',
     ok: true,
   });

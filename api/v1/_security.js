@@ -20,10 +20,6 @@ export function applySecurityHeaders(res) {
 
 /**
  * IP and Key-based sliding-window rate limiter
- * @param {string} key Identifier (IP or Email)
- * @param {number} maxRequests Maximum allowed requests in window
- * @param {number} windowMs Time window in milliseconds
- * @returns {boolean} true if allowed, false if rate limited
  */
 export function checkRateLimit(key, maxRequests = 20, windowMs = 60 * 1000) {
   const now = Date.now();
@@ -51,12 +47,49 @@ export function getClientIp(req) {
 }
 
 /**
- * Cryptographic timing-safe string comparison to protect against side-channel timing attacks
+ * Cryptographic timing-safe string comparison
  */
 export function timingSafeCompare(a = '', b = '') {
   const hashA = crypto.createHash('sha256').update(String(a)).digest();
   const hashB = crypto.createHash('sha256').update(String(b)).digest();
   return crypto.timingSafeEqual(hashA, hashB);
+}
+
+/**
+ * Generate a cryptographically signed HMAC OTP token for stateless serverless verification
+ * This guarantees verification succeeds even when Vercel routes to different Lambda instances.
+ */
+export function createOtpToken(email, code, expiresAt) {
+  const secret = process.env.ADMIN_SECRET || process.env.SUPABASE_SECRET_KEY || 'mps_otp_secret_key_2026';
+  const hmac = crypto
+    .createHmac('sha256', secret)
+    .update(`${email.toLowerCase()}:${code}:${expiresAt}`)
+    .digest('hex');
+  return `${expiresAt}:${hmac}`;
+}
+
+/**
+ * Verify HMAC OTP token across serverless cold starts
+ * @returns {'valid' | 'expired' | 'invalid'}
+ */
+export function verifyOtpToken(email, code, otpToken) {
+  if (!otpToken || typeof otpToken !== 'string') return 'invalid';
+  const parts = otpToken.split(':');
+  if (parts.length !== 2) return 'invalid';
+
+  const [expiresAtStr, signature] = parts;
+  const expiresAt = Number(expiresAtStr);
+  if (isNaN(expiresAt) || Date.now() > expiresAt) {
+    return 'expired';
+  }
+
+  const secret = process.env.ADMIN_SECRET || process.env.SUPABASE_SECRET_KEY || 'mps_otp_secret_key_2026';
+  const expectedHmac = crypto
+    .createHmac('sha256', secret)
+    .update(`${email.toLowerCase()}:${code}:${expiresAt}`)
+    .digest('hex');
+
+  return timingSafeCompare(signature, expectedHmac) ? 'valid' : 'invalid';
 }
 
 /**
@@ -83,7 +116,7 @@ export function sanitizeDomain(siteUrl = '') {
 }
 
 /**
- * Verify administrative authorization for protected admin routes
+ * Verify administrative authorization
  */
 export function verifyAdminAccess(req) {
   const adminSecret = process.env.ADMIN_SECRET || 'mps_superadmin_secret_2026';
@@ -91,6 +124,5 @@ export function verifyAdminAccess(req) {
   if (headerSecret && timingSafeCompare(headerSecret, adminSecret)) {
     return true;
   }
-  // Also permit local dev or session checking
   return false;
 }

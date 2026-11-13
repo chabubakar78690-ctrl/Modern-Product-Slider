@@ -116,3 +116,4 @@ Here is the complete reference of all configuration keys (`.env`):
 - [x] **SSL Mode Required**: Ensure `?sslmode=require` is appended to all PostgreSQL URLs.
 - [x] **Security Headers**: HSTS, CSP, X-Frame-Options (`SAMEORIGIN`), X-Content-Type-Options (`nosniff`).
 - [x] **Input Sanitization**: Domains and emails are normalized and strictly validated before database storage.
+

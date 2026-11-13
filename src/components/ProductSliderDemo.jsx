@@ -540,3 +540,4 @@ export default function ProductSliderDemo({ isDark = true }) {
     </section>
   );
 }
+

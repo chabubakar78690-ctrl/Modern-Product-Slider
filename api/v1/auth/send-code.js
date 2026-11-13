@@ -5,6 +5,7 @@ import {
   checkRateLimit,
   getClientIp,
   isValidEmail,
+  createOtpToken,
 } from '../_security.js';
 
 export default async function handler(req, res) {
@@ -17,8 +18,8 @@ export default async function handler(req, res) {
 
   const clientIp = getClientIp(req);
 
-  // 1. Sliding-window rate limit (max 5 requests per 10 minutes per IP)
-  const allowed = checkRateLimit(`otp_send_${clientIp}`, 5, 10 * 60 * 1000);
+  // 1. Sliding-window rate limit (max 10 requests per 10 minutes per IP)
+  const allowed = checkRateLimit(`otp_send_${clientIp}`, 10, 10 * 60 * 1000);
   if (!allowed) {
     return res.status(429).json({
       error: 'Too many verification requests. Please wait a few minutes before trying again.',
@@ -38,11 +39,17 @@ export default async function handler(req, res) {
 
   // 3. Cryptographically secure 6-digit OTP
   const code = String(crypto.randomInt(100000, 999999));
+  const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
+
+  // Generate stateless HMAC OTP token for serverless resilience
+  const otpToken = createOtpToken(email, code, expiresAt);
+
+  // Also save in memory cache
   db.otps.set(email, {
     code,
     name,
     attempts: 0,
-    expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes expiry
+    expiresAt,
   });
 
   let emailDelivered = false;
@@ -98,7 +105,7 @@ export default async function handler(req, res) {
     success: true,
     email,
     emailDelivered,
-    // Provide previewCode during local dev or if SMTP key is not yet configured
+    otpToken,
     previewCode: emailDelivered ? undefined : code,
   });
 }

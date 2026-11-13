@@ -85,3 +85,4 @@ VALUES
     ('usr_admin_01', 'modern-product-slider.vercel.app'),
     ('usr_02', 'sarahstreetwear.com')
 ON CONFLICT DO NOTHING;
+

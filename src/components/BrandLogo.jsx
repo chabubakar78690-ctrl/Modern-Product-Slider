@@ -48,3 +48,4 @@ export default function BrandLogo({ className = 'h-9', showSubtitle = true, isDa
     </div>
   );
 }
+
