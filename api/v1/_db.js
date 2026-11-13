@@ -21,6 +21,7 @@ const globalStore = globalThis.__MPS_SAAS_STORE__ || {
   otps: new Map(),
   transactions: [],
   logs: [],
+  externalApis: [],
   initialized: false,
 };
 globalThis.__MPS_SAAS_STORE__ = globalStore;
@@ -184,6 +185,7 @@ export const db = {
   otps: globalStore.otps,
   transactions: globalStore.transactions,
   logs: globalStore.logs,
+  externalApis: globalStore.externalApis,
   persist: persistLocal,
 };
 
