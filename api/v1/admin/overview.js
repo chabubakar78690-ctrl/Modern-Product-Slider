@@ -14,9 +14,48 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
     const { action, email, planId, status, domain } = body;
-    const target = db.users.get(String(email || '').toLowerCase());
+    const cleanEmail = String(email || '').toLowerCase().trim();
+    const target = db.users.get(cleanEmail);
 
-    if (target) {
+    if (action === 'create_or_upgrade' && cleanEmail) {
+      const price = planId === 'single' ? 3 : 10;
+      const planName = planId === 'single' ? 'Single Site ($3/mo)' : 'Unlimited Sites ($10/mo)';
+      const maxSites = planId === 'single' ? 1 : -1;
+      const apiKey = generateKey(planId);
+      const userObj = {
+        id: target ? target.id : 'usr_' + Math.random().toString(36).slice(2, 8),
+        name: body.name || (target ? target.name : cleanEmail.split('@')[0]),
+        email: cleanEmail,
+        role: target ? target.role : 'customer',
+        provider: body.paymentMethod || 'Google ID Payment',
+        planId,
+        planName,
+        price,
+        apiKey,
+        maxSites,
+        activeSites: target ? target.activeSites : [],
+        status: 'active',
+        createdAt: target ? target.createdAt : new Date().toISOString(),
+      };
+      db.users.set(cleanEmail, userObj);
+      db.transactions.unshift({
+        id: 'TXN-' + Math.floor(1000 + Math.random() * 9000),
+        email: cleanEmail,
+        plan: planName,
+        amount: price,
+        method: body.paymentMethod || 'Google ID Payment',
+        status: 'Paid',
+        date: new Date().toISOString().slice(0, 10),
+      });
+      db.logs.unshift({
+        id: Date.now(),
+        event: 'Manual License Issued',
+        detail: `Admin issued ${planName} to ${cleanEmail} via ${body.paymentMethod || 'Google ID'}`,
+        time: 'Just now',
+        ok: true,
+      });
+      db.persist();
+    } else if (target) {
       if (action === 'change_plan') {
         target.planId = planId;
         target.planName =
@@ -55,6 +94,6 @@ export default async function handler(req, res) {
     },
     users,
     transactions: db.transactions,
-    logs: db.logs.slice(0, 20),
+    logs: db.logs.slice(0, 25),
   });
 }

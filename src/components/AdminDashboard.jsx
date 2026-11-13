@@ -8,24 +8,32 @@ import {
   ShieldAlert,
   ShieldCheck,
   Trash2,
-  RotateCcw,
   BarChart3,
   Activity,
   Download,
   RefreshCw,
   CheckCircle2,
   XCircle,
-  AlertTriangle,
-  Layers,
-  ChevronDown,
+  Plus,
+  CreditCard,
+  Smartphone,
+  Building2,
+  Check,
 } from 'lucide-react';
 
 export default function AdminDashboard({ isDark = true }) {
   const [data, setData] = useState(null);
-  const [tab, setTab] = useState('users'); // users | transactions | logs
+  const [tab, setTab] = useState('users'); // users | transactions | logs | new_user
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState('all');
+  const [methodFilter, setMethodFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+
+  // New User / Manual License Generation Form
+  const [newEmail, setNewEmail] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newPlan, setNewPlan] = useState('unlimited');
+  const [newPaymentMethod, setNewPaymentMethod] = useState('Google ID Payment');
 
   const fetchOverview = async () => {
     setLoading(true);
@@ -50,6 +58,21 @@ export default function AdminDashboard({ isDark = true }) {
     });
     const json = await res.json();
     setData(json);
+  };
+
+  const handleCreateManualUser = async (e) => {
+    e.preventDefault();
+    if (!newEmail) return;
+    await runAdminAction({
+      action: 'create_or_upgrade',
+      email: newEmail,
+      name: newName,
+      planId: newPlan,
+      paymentMethod: newPaymentMethod,
+    });
+    setNewEmail('');
+    setNewName('');
+    setTab('users');
   };
 
   const exportCsv = () => {
@@ -79,12 +102,14 @@ export default function AdminDashboard({ isDark = true }) {
     return (
       <div className={`py-24 text-center text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
         <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-3 text-sky-500" />
-        Loading Admin Control Center...
+        Loading Admin Operations Portal...
       </div>
     );
   }
 
   const metrics = data?.metrics || { totalUsers: 0, proSubscribers: 0, mrr: 0, totalActiveDomains: 0 };
+  const mrrPkr = (metrics.mrr || 0) * 280; // approximate PKR conversion
+
   const users = (data?.users || []).filter((u) => {
     const matchesSearch =
       u.email.toLowerCase().includes(search.toLowerCase()) ||
@@ -94,20 +119,31 @@ export default function AdminDashboard({ isDark = true }) {
     return matchesSearch && matchesPlan;
   });
 
+  const transactions = (data?.transactions || []).filter((t) => {
+    if (methodFilter === 'all') return true;
+    return (t.method || '').toLowerCase().includes(methodFilter.toLowerCase());
+  });
+
   return (
     <div className="space-y-8">
-      {/* Header Bar */}
+      {/* Admin Title & Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <span className="text-[11px] font-black uppercase tracking-wider text-amber-500 inline-flex items-center gap-1.5 mb-1">
-            <ShieldCheck className="w-3.5 h-3.5" /> Super Admin Portal
+            <ShieldCheck className="w-3.5 h-3.5" /> Super Admin Portal (Pakistan &amp; Global)
           </span>
           <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
             Licenses &amp; Revenue Operations
           </h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setTab('new_user')}
+            className="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-sky-500/20 transition active:scale-95"
+          >
+            <Plus className="w-4 h-4" /> Issue License
+          </button>
           <button
             onClick={fetchOverview}
             className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition ${
@@ -131,9 +167,9 @@ export default function AdminDashboard({ isDark = true }) {
         </div>
       </div>
 
-      {/* Real-time KPI Stats Grid */}
+      {/* KPI Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* MRR */}
+        {/* MRR (USD & PKR) */}
         <div
           className={`p-5 rounded-2xl border transition ${
             isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
@@ -148,11 +184,11 @@ export default function AdminDashboard({ isDark = true }) {
             <span className="text-xs text-slate-400 font-normal">/mo</span>
           </div>
           <span className="text-[11px] text-emerald-500 font-semibold mt-1 block">
-            {metrics.proSubscribers} active paid tiers
+            ~₨ {mrrPkr.toLocaleString()} PKR / month
           </span>
         </div>
 
-        {/* Total Customers */}
+        {/* Total Accounts */}
         <div
           className={`p-5 rounded-2xl border transition ${
             isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
@@ -166,7 +202,7 @@ export default function AdminDashboard({ isDark = true }) {
             {metrics.totalUsers}
           </div>
           <span className={`text-[11px] font-medium mt-1 block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Google &amp; Gmail verified
+            Google ID &amp; Gmail verified
           </span>
         </div>
 
@@ -177,14 +213,14 @@ export default function AdminDashboard({ isDark = true }) {
           }`}
         >
           <div className="flex items-center justify-between text-xs font-semibold text-slate-400 mb-2">
-            <span>Pro Subscribers</span>
+            <span>Pro Subscriptions</span>
             <Key className="w-4 h-4 text-amber-500" />
           </div>
           <div className={`text-3xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
             {metrics.proSubscribers}
           </div>
           <span className="text-[11px] text-sky-500 font-semibold mt-1 block">
-            {metrics.totalUsers > 0 ? Math.round((metrics.proSubscribers / metrics.totalUsers) * 100) : 0}% conversion rate
+            {metrics.totalUsers > 0 ? Math.round((metrics.proSubscribers / metrics.totalUsers) * 100) : 0}% active paying
           </span>
         </div>
 
@@ -202,12 +238,12 @@ export default function AdminDashboard({ isDark = true }) {
             {metrics.totalActiveDomains}
           </div>
           <span className={`text-[11px] font-medium mt-1 block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Live WooCommerce sites
+            WordPress domains active
           </span>
         </div>
       </div>
 
-      {/* Tabs Navigation */}
+      {/* Tabs Switcher */}
       <div className={`flex items-center gap-2 border-b pb-1 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
         <button
           onClick={() => setTab('users')}
@@ -231,7 +267,7 @@ export default function AdminDashboard({ isDark = true }) {
               : 'text-slate-600 hover:text-black'
           }`}
         >
-          <DollarSign className="w-3.5 h-3.5" /> Transactions ({data?.transactions?.length || 0})
+          <DollarSign className="w-3.5 h-3.5" /> Transactions ({transactions.length})
         </button>
         <button
           onClick={() => setTab('logs')}
@@ -243,14 +279,25 @@ export default function AdminDashboard({ isDark = true }) {
               : 'text-slate-600 hover:text-black'
           }`}
         >
-          <Activity className="w-3.5 h-3.5" /> Security &amp; API Logs
+          <Activity className="w-3.5 h-3.5" /> Security &amp; Audit Logs
+        </button>
+        <button
+          onClick={() => setTab('new_user')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            tab === 'new_user'
+              ? 'bg-sky-500 text-white shadow-sm'
+              : isDark
+              ? 'text-slate-400 hover:text-white'
+              : 'text-slate-600 hover:text-black'
+          }`}
+        >
+          <Plus className="w-3.5 h-3.5" /> Manual License Issue
         </button>
       </div>
 
-      {/* TAB: USERS & LICENSES */}
+      {/* TAB 1: ALL USERS & LICENSES */}
       {tab === 'users' && (
         <div className="space-y-4">
-          {/* Search & Filter Bar */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="relative flex-1 min-w-[260px]">
               <Search className={`w-4 h-4 absolute left-3.5 top-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
@@ -286,7 +333,6 @@ export default function AdminDashboard({ isDark = true }) {
             </div>
           </div>
 
-          {/* Users Table */}
           <div
             className={`rounded-2xl border overflow-hidden ${
               isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
@@ -314,12 +360,12 @@ export default function AdminDashboard({ isDark = true }) {
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="font-semibold block">{u.planName}</span>
-                        <span className="text-slate-400">${u.price}/month</span>
+                        <span className="text-slate-400">${u.price}/mo (~₨ {(u.price * 280).toLocaleString()} PKR)</span>
                       </td>
                       <td className="py-3.5 px-4 font-mono">
                         {u.apiKey ? (
                           <span className={`px-2 py-1 rounded-md text-[11px] ${isDark ? 'bg-slate-950 text-sky-400 border border-slate-800' : 'bg-slate-100 text-sky-700'}`}>
-                            {u.apiKey.slice(0, 15)}...
+                            {u.apiKey.slice(0, 16)}...
                           </span>
                         ) : (
                           <span className="text-slate-400 italic">No key (Free)</span>
@@ -361,7 +407,6 @@ export default function AdminDashboard({ isDark = true }) {
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {/* Plan Switcher */}
                           <select
                             value={u.planId}
                             onChange={(e) => runAdminAction({ action: 'change_plan', email: u.email, planId: e.target.value })}
@@ -372,7 +417,6 @@ export default function AdminDashboard({ isDark = true }) {
                             <option value="unlimited">Unlimited ($10/mo)</option>
                           </select>
 
-                          {/* Suspend Toggle */}
                           <button
                             onClick={() => runAdminAction({ action: 'toggle_status', email: u.email })}
                             title={u.status === 'active' ? 'Suspend License' : 'Activate License'}
@@ -385,10 +429,9 @@ export default function AdminDashboard({ isDark = true }) {
                             <ShieldAlert className="w-3.5 h-3.5" />
                           </button>
 
-                          {/* Delete User */}
                           <button
                             onClick={() => {
-                              if (window.confirm(`Delete account for ${u.email}?`)) {
+                              if (window.confirm(`Delete license for ${u.email}?`)) {
                                 runAdminAction({ action: 'delete_user', email: u.email });
                               }
                             }}
@@ -408,47 +451,68 @@ export default function AdminDashboard({ isDark = true }) {
         </div>
       )}
 
-      {/* TAB: TRANSACTIONS */}
+      {/* TAB 2: TRANSACTIONS & PAYMENT METHOD FILTERS */}
       {tab === 'transactions' && (
-        <div
-          className={`rounded-2xl border overflow-hidden ${
-            isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
-          }`}
-        >
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className={`border-b font-bold ${isDark ? 'border-slate-800 bg-slate-950/40 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
-                <th className="py-3 px-4">TXN ID</th>
-                <th className="py-3 px-4">Customer</th>
-                <th className="py-3 px-4">Plan</th>
-                <th className="py-3 px-4">Amount</th>
-                <th className="py-3 px-4">Payment Method</th>
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Status</th>
-              </tr>
-            </thead>
-            <tbody className={`divide-y ${isDark ? 'divide-slate-800' : 'divide-slate-100'}`}>
-              {(data?.transactions || []).map((t) => (
-                <tr key={t.id} className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50/70'}>
-                  <td className="py-3 px-4 font-mono font-bold text-sky-500">{t.id}</td>
-                  <td className={`py-3 px-4 font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{t.email}</td>
-                  <td className="py-3 px-4">{t.plan}</td>
-                  <td className="py-3 px-4 font-black">${t.amount}.00</td>
-                  <td className="py-3 px-4 text-slate-400">{t.method}</td>
-                  <td className="py-3 px-4 text-slate-400">{t.date}</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
-                      {t.status}
-                    </span>
-                  </td>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-xs">
+            <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>Filter by Payment Gateway:</span>
+            {['all', 'google', 'card', 'jazzcash', 'easypaisa', 'sadapay'].map((m) => (
+              <button
+                key={m}
+                onClick={() => setMethodFilter(m)}
+                className={`px-3 py-1.5 rounded-xl border text-xs font-bold capitalize transition ${
+                  methodFilter === m
+                    ? 'bg-sky-500 text-white border-sky-400'
+                    : isDark
+                    ? 'bg-slate-900 border-slate-800 text-slate-400'
+                    : 'bg-white border-slate-200 text-slate-700'
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+
+          <div
+            className={`rounded-2xl border overflow-hidden ${
+              isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+            }`}
+          >
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className={`border-b font-bold ${isDark ? 'border-slate-800 bg-slate-950/40 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
+                  <th className="py-3 px-4">TXN ID</th>
+                  <th className="py-3 px-4">Customer</th>
+                  <th className="py-3 px-4">Plan</th>
+                  <th className="py-3 px-4">Amount</th>
+                  <th className="py-3 px-4">Payment Method</th>
+                  <th className="py-3 px-4">Date</th>
+                  <th className="py-3 px-4">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className={`divide-y ${isDark ? 'divide-slate-800' : 'divide-slate-100'}`}>
+                {transactions.map((t) => (
+                  <tr key={t.id} className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50/70'}>
+                    <td className="py-3 px-4 font-mono font-bold text-sky-500">{t.id}</td>
+                    <td className={`py-3 px-4 font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{t.email}</td>
+                    <td className="py-3 px-4">{t.plan}</td>
+                    <td className="py-3 px-4 font-black">${t.amount}.00 (~₨ {(t.amount * 280).toLocaleString()} PKR)</td>
+                    <td className="py-3 px-4 font-semibold text-slate-300">{t.method}</td>
+                    <td className="py-3 px-4 text-slate-400">{t.date}</td>
+                    <td className="py-3 px-4">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                        {t.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* TAB: AUDIT LOGS */}
+      {/* TAB 3: AUDIT & API LOGS */}
       {tab === 'logs' && (
         <div
           className={`rounded-2xl border p-4 space-y-2 ${
@@ -475,6 +539,92 @@ export default function AdminDashboard({ isDark = true }) {
             </div>
           ))}
         </div>
+      )}
+
+      {/* TAB 4: MANUAL LICENSE ISSUE FORM */}
+      {tab === 'new_user' && (
+        <form
+          onSubmit={handleCreateManualUser}
+          className={`max-w-xl p-8 rounded-3xl border space-y-5 ${
+            isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+          }`}
+        >
+          <div>
+            <h3 className="text-xl font-black">Issue Pro License Manually</h3>
+            <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              Manually create or upgrade a client account with custom payment gateway attribution.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold mb-1">Customer Email</label>
+            <input
+              type="email"
+              required
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="client@store.com"
+              className={`w-full px-4 py-2.5 rounded-xl border text-xs ${
+                isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+              }`}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold mb-1">Customer Full Name (Optional)</label>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Store Owner"
+              className={`w-full px-4 py-2.5 rounded-xl border text-xs ${
+                isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+              }`}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold mb-1">License Tier</label>
+              <select
+                value={newPlan}
+                onChange={(e) => setNewPlan(e.target.value)}
+                className={`w-full px-3 py-2.5 rounded-xl border text-xs font-bold ${
+                  isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                }`}
+              >
+                <option value="single">Single Site ($3/mo)</option>
+                <option value="unlimited">Unlimited Sites ($10/mo)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold mb-1">Payment Method / Gateway</label>
+              <select
+                value={newPaymentMethod}
+                onChange={(e) => setNewPaymentMethod(e.target.value)}
+                className={`w-full px-3 py-2.5 rounded-xl border text-xs font-bold ${
+                  isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                }`}
+              >
+                <option value="Google ID Payment">Google ID / Google Pay</option>
+                <option value="SadaPay / Card">SadaPay Card</option>
+                <option value="NayaPay / Card">NayaPay Card</option>
+                <option value="JazzCash Direct">JazzCash Mobile Wallet</option>
+                <option value="EasyPaisa Direct">EasyPaisa Mobile Wallet</option>
+                <option value="Pakistani Bank Transfer (IBAN)">Bank Transfer (IBAN)</option>
+                <option value="Founder Complimentary">Founder Complimentary</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full py-3.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-extrabold text-xs shadow-md shadow-sky-500/25 transition active:scale-98"
+          >
+            Generate &amp; Issue Pro License Key
+          </button>
+        </form>
       )}
     </div>
   );
