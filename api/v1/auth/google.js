@@ -1,21 +1,30 @@
 import { db } from '../_db.js';
+import {
+  applySecurityHeaders,
+  getClientIp,
+  isValidEmail,
+} from '../_security.js';
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  applySecurityHeaders(res);
 
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+  }
+
+  const clientIp = getClientIp(req);
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
   let email = String(body.email || '').trim().toLowerCase();
-  let name = String(body.name || '').trim();
-  let picture = String(body.picture || '').trim();
+  let name = String(body.name || '').trim().slice(0, 100);
+  let picture = String(body.picture || '').trim().slice(0, 500);
 
-  // If real Google Identity Services credential JWT is passed, decode & verify with Google tokeninfo
+  // If Google Identity Services JWT credential is provided, verify against Google's tokeninfo endpoint
   if (body.credential) {
     try {
-      const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(body.credential)}`);
+      const verifyRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(body.credential)}`
+      );
       if (verifyRes.ok) {
         const info = await verifyRes.json();
         email = String(info.email || '').toLowerCase();
@@ -23,12 +32,12 @@ export default async function handler(req, res) {
         picture = info.picture || picture;
       }
     } catch {
-      // fallback to payload fields
+      // fallback to body fields
     }
   }
 
-  if (!email) {
-    return res.status(400).json({ error: 'Google account email missing.' });
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: 'Valid Google email address required.' });
   }
 
   let user = db.users.get(email);
@@ -59,10 +68,11 @@ export default async function handler(req, res) {
   db.logs.unshift({
     id: Date.now(),
     event: 'Google Sign-In',
-    detail: `${email} authenticated via Google OAuth`,
+    detail: `${email} authenticated via Google OAuth (IP: ${clientIp})`,
     time: 'Just now',
     ok: true,
   });
+  db.persist();
 
   return res.status(200).json({ success: true, user });
 }

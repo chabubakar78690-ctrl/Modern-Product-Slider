@@ -1,28 +1,53 @@
+import crypto from 'crypto';
 import { db } from '../_db.js';
+import {
+  applySecurityHeaders,
+  checkRateLimit,
+  getClientIp,
+  isValidEmail,
+} from '../_security.js';
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  applySecurityHeaders(res);
+
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+  }
+
+  const clientIp = getClientIp(req);
+
+  // 1. Sliding-window rate limit (max 5 requests per 10 minutes per IP)
+  const allowed = checkRateLimit(`otp_send_${clientIp}`, 5, 10 * 60 * 1000);
+  if (!allowed) {
+    return res.status(429).json({
+      error: 'Too many verification requests. Please wait a few minutes before trying again.',
+    });
+  }
 
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
   const email = String(body.email || '').trim().toLowerCase();
-  const name = String(body.name || '').trim();
+  const name = String(body.name || '').trim().slice(0, 100);
 
-  if (!email || !email.includes('@')) {
-    return res.status(400).json({ error: 'Please enter a valid Gmail or email address.' });
+  // 2. Strict Email Validation
+  if (!isValidEmail(email)) {
+    return res.status(400).json({
+      error: 'Please enter a valid email address (e.g. name@gmail.com).',
+    });
   }
 
-  const code = String(Math.floor(100000 + Math.random() * 900000));
+  // 3. Cryptographically secure 6-digit OTP
+  const code = String(crypto.randomInt(100000, 999999));
   db.otps.set(email, {
     code,
     name,
-    expiresAt: Date.now() + 10 * 60 * 1000,
+    attempts: 0,
+    expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes expiry
   });
 
   let emailDelivered = false;
+
+  // 4. Send via Resend SMTP API if configured
   if (process.env.RESEND_API_KEY) {
     try {
       const mailRes = await fetch('https://api.resend.com/emails', {
@@ -35,7 +60,22 @@ export default async function handler(req, res) {
           from: process.env.SMTP_FROM || 'Modern Product Slider <onboarding@resend.dev>',
           to: [email],
           subject: `${code} is your Modern Product Slider verification code`,
-          html: `<div style="font-family:sans-serif;padding:24px;"><h2>Verify your email</h2><p>Your 6-digit verification code for <strong>Modern Product Slider</strong> is:</p><div style="font-size:32px;font-weight:800;letter-spacing:6px;padding:14px 20px;background:#f1f5f9;border-radius:8px;display:inline-block;">${code}</div><p style="color:#64748b;font-size:13px;margin-top:16px;">This code expires in 10 minutes.</p></div>`,
+          html: `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
+              <h2 style="color: #0b132b; margin-top: 0; font-size: 22px;">Modern Product Slider</h2>
+              <p style="color: #475569; font-size: 15px; line-height: 1.5;">
+                Hello${name ? ' ' + name : ''}, here is your one-time 6-digit verification code to sign in to your Pro License Portal:
+              </p>
+              <div style="margin: 28px 0; text-align: center;">
+                <span style="font-size: 34px; font-weight: 800; letter-spacing: 8px; padding: 14px 28px; background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; border-radius: 12px; display: inline-block; font-family: monospace;">
+                  ${code}
+                </span>
+              </div>
+              <p style="color: #64748b; font-size: 13px; line-height: 1.4;">
+                This code will expire in <strong>10 minutes</strong>. If you did not request this code, you can safely ignore this email.
+              </p>
+            </div>
+          `,
         }),
       });
       emailDelivered = mailRes.ok;
@@ -44,19 +84,21 @@ export default async function handler(req, res) {
     }
   }
 
+  // 5. Audit Logging
   db.logs.unshift({
     id: Date.now(),
     event: 'OTP Requested',
-    detail: `6-digit login code generated for ${email}`,
+    detail: `Verification code generated for ${email} (IP: ${clientIp})`,
     time: 'Just now',
     ok: true,
   });
+  db.persist();
 
   return res.status(200).json({
     success: true,
     email,
     emailDelivered,
-    // Included so you can test OTP verification immediately even before adding RESEND_API_KEY
+    // Provide previewCode during local dev or if SMTP key is not yet configured
     previewCode: emailDelivered ? undefined : code,
   });
 }

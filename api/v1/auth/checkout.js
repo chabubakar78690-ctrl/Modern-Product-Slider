@@ -1,16 +1,27 @@
 import { db, generateKey } from '../_db.js';
+import {
+  applySecurityHeaders,
+  getClientIp,
+  isValidEmail,
+} from '../_security.js';
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  applySecurityHeaders(res);
 
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+  }
+
+  const clientIp = getClientIp(req);
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
   const email = String(body.email || '').trim().toLowerCase();
   const planId = body.planId === 'single' ? 'single' : 'unlimited';
   const rotateOnly = Boolean(body.rotateOnly);
+
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: 'Valid customer email required for checkout.' });
+  }
 
   let user = db.users.get(email);
   if (!user) {
@@ -31,12 +42,22 @@ export default async function handler(req, res) {
     };
   }
 
+  // Key rotation action
   if (rotateOnly && user.apiKey) {
     user.apiKey = generateKey(user.planId);
     db.users.set(email, user);
+    db.logs.unshift({
+      id: Date.now(),
+      event: 'API Key Rotated',
+      detail: `${email} generated a new Pro license key`,
+      time: 'Just now',
+      ok: true,
+    });
+    db.persist();
     return res.status(200).json({ success: true, user });
   }
 
+  // Pro Upgrade
   const price = planId === 'single' ? 3 : 10;
   const planName = planId === 'single' ? 'Single Site ($3/mo)' : 'Unlimited Sites ($10/mo)';
   user.planId = planId;
@@ -59,11 +80,12 @@ export default async function handler(req, res) {
 
   db.logs.unshift({
     id: Date.now(),
-    event: 'Pro Plan Purchased',
-    detail: `${email} upgraded to ${planName}`,
+    event: 'Pro Subscription Activated',
+    detail: `${email} upgraded to ${planName} (IP: ${clientIp})`,
     time: 'Just now',
     ok: true,
   });
+  db.persist();
 
   return res.status(200).json({ success: true, user });
 }

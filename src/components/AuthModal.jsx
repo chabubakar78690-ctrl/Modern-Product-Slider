@@ -1,7 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mail, ArrowRight, ShieldCheck, Loader2, Sparkles } from 'lucide-react';
+import {
+  X,
+  Mail,
+  ArrowRight,
+  ArrowLeft,
+  ShieldCheck,
+  Loader2,
+  Sparkles,
+  KeyRound,
+  CheckCircle2,
+} from 'lucide-react';
+import BrandLogo from './BrandLogo.jsx';
 
-export default function AuthModal({ isOpen, onClose, initialMode = 'signup', selectedPlan, onSuccess }) {
+export default function AuthModal({
+  isOpen,
+  onClose,
+  initialMode = 'signup',
+  selectedPlan,
+  onSuccess,
+  isDark = true,
+}) {
   const [mode, setMode] = useState(initialMode); // login | signup
   const [step, setStep] = useState('email'); // email | otp
   const [name, setName] = useState('');
@@ -22,7 +40,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
     setPreviewCode('');
   }, [initialMode, isOpen]);
 
-  // Initialize real Google Identity Services button if VITE_GOOGLE_CLIENT_ID is set
+  // Real Google Identity Services initialization
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     if (isOpen && clientId && window.google?.accounts?.id && googleBtnRef.current) {
@@ -48,18 +66,20 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
         },
       });
       window.google.accounts.id.renderButton(googleBtnRef.current, {
-        theme: 'filled_black',
+        theme: isDark ? 'filled_black' : 'outline',
         size: 'large',
         width: 360,
         text: 'continue_with',
       });
     }
-  }, [isOpen, onSuccess]);
+  }, [isOpen, onSuccess, isDark]);
 
   if (!isOpen) return null;
 
   const handleSimulatedGoogleSignIn = async () => {
-    const gmail = email.trim() || window.prompt('Enter your Google / Gmail address to continue:', 'alex.store@gmail.com');
+    const gmail =
+      email.trim() ||
+      window.prompt('Enter your Google / Gmail address to continue:', 'alex.store@gmail.com');
     if (!gmail) return;
     setLoading(true);
     setError('');
@@ -133,7 +153,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
     e.preventDefault();
     const code = otp.join('');
     if (code.length !== 6) {
-      setError('Enter the full 6-digit code sent to your Gmail.');
+      setError('Enter the full 6-digit verification code.');
       return;
     }
     setLoading(true);
@@ -160,45 +180,58 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
   const hasRealGoogleClient = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-7 relative shadow-2xl">
+    <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4">
+      <div
+        className={`rounded-3xl max-w-md w-full p-8 relative shadow-2xl border transition-all ${
+          isDark
+            ? 'bg-slate-900 border-slate-800 text-slate-100'
+            : 'bg-white border-slate-200 text-slate-900'
+        }`}
+      >
+        {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800"
+          aria-label="Close modal"
+          className={`absolute top-5 right-5 p-2 rounded-xl border transition ${
+            isDark
+              ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+              : 'bg-slate-100 border-slate-200 text-slate-500 hover:text-black'
+          }`}
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
 
+        {/* Modal Brand Header */}
         <div className="mb-6">
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-sky-400/10 text-sky-400 border border-sky-400/20 mb-2">
-            <Sparkles className="w-3 h-3" /> Modern Product Slider Cloud
-          </span>
-          <h2 className="text-2xl font-extrabold text-white">
+          <div className="mb-3">
+            <BrandLogo className="h-8" isDark={isDark} showSubtitle={false} />
+          </div>
+          <h2 className="text-2xl font-black tracking-tight">
             {step === 'otp'
-              ? 'Check your Gmail inbox'
+              ? 'Enter Verification Code'
               : mode === 'signup'
-              ? 'Create your Pro account'
-              : 'Sign in to your account'}
+              ? 'Create Your Pro Account'
+              : 'Sign in to Your Account'}
           </h2>
           {selectedPlan && (
-            <p className="text-xs text-slate-400 mt-1">
-              Continuing to checkout for{' '}
-              <strong className="text-sky-400">
-                {selectedPlan === 'single' ? 'Single Site ($3/mo)' : 'Unlimited Sites ($10/mo)'}
+            <p className={`text-xs mt-1 font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              Proceeding with{' '}
+              <strong className="text-sky-500">
+                {selectedPlan === 'single' ? 'Single Site Plan ($3/mo)' : 'Unlimited Sites Plan ($10/mo)'}
               </strong>
             </p>
           )}
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs font-medium">
             {error}
           </div>
         )}
 
         {step === 'email' ? (
           <div className="space-y-4">
-            {/* Continue with Google */}
+            {/* Google OAuth Button */}
             {hasRealGoogleClient ? (
               <div ref={googleBtnRef} className="flex justify-center" />
             ) : (
@@ -206,9 +239,13 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
                 type="button"
                 onClick={handleSimulatedGoogleSignIn}
                 disabled={loading}
-                className="w-full py-3 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-sm flex items-center justify-center gap-3 transition shadow"
+                className={`w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-3 transition border shadow-sm ${
+                  isDark
+                    ? 'bg-white hover:bg-slate-100 text-slate-900 border-white'
+                    : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-300'
+                }`}
               >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
                     d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
@@ -231,42 +268,56 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
             )}
 
             <div className="relative flex items-center py-1">
-              <div className="flex-grow border-t border-slate-800" />
-              <span className="shrink mx-3 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
-                or continue with Gmail code
+              <div className={`flex-grow border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`} />
+              <span
+                className={`shrink mx-3 text-[11px] uppercase tracking-wider font-bold ${
+                  isDark ? 'text-slate-500' : 'text-slate-400'
+                }`}
+              >
+                or email verification
               </span>
-              <div className="flex-grow border-t border-slate-800" />
+              <div className={`flex-grow border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`} />
             </div>
 
-            {/* Continue with Email -> Sends 6-digit OTP to Gmail */}
+            {/* Email OTP Request Form */}
             <form onSubmit={handleSendOtp} className="space-y-3.5">
               {mode === 'signup' && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Full Name</label>
+                  <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Full Name
+                  </label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Alex Mercer"
-                    className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-sky-400"
+                    className={`w-full px-4 py-3 rounded-xl border text-sm transition focus:outline-none focus:ring-2 focus:ring-sky-500/50 ${
+                      isDark
+                        ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-600'
+                        : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
+                    }`}
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">
+                <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                   Gmail / Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                  <Mail className={`w-4 h-4 absolute left-3.5 top-3.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@gmail.com"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-sky-400"
+                    placeholder="you@store.com"
+                    className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm transition focus:outline-none focus:ring-2 focus:ring-sky-500/50 ${
+                      isDark
+                        ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-600'
+                        : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
+                    }`}
                   />
                 </div>
               </div>
@@ -274,25 +325,25 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 px-4 rounded-xl bg-sky-400 hover:bg-sky-300 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 transition"
+                className="w-full py-3.5 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-sky-500/25 transition active:scale-98"
               >
                 {loading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
-                    Send 6-Digit Verification Code <ArrowRight className="w-4 h-4" />
+                    Send 6-Digit Code <ArrowRight className="w-4 h-4" />
                   </>
                 )}
               </button>
             </form>
 
-            <div className="pt-2 text-center text-xs text-slate-400 flex items-center justify-between">
+            <div className="pt-2 flex items-center justify-between text-xs">
               <button
                 type="button"
                 onClick={() => setMode(mode === 'signup' ? 'login' : 'signup')}
-                className="text-sky-400 hover:underline font-medium"
+                className="text-sky-500 hover:underline font-semibold"
               >
-                {mode === 'signup' ? 'Already have an account? Log in' : 'New here? Create an account'}
+                {mode === 'signup' ? 'Already have an account? Sign in' : 'New user? Create an account'}
               </button>
               <button
                 type="button"
@@ -300,32 +351,34 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
                   setEmail('admin@modernproductslider.com');
                   setMode('login');
                 }}
-                className="text-slate-500 hover:text-slate-300"
+                className={`text-[11px] hover:underline ${isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}
               >
-                Fill Admin Email
+                Admin Quick-Fill
               </button>
             </div>
           </div>
         ) : (
+          /* OTP Entry Step */
           <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <p className="text-xs text-slate-300 leading-relaxed">
-              We sent a 6-digit login code to <strong className="text-white">{email}</strong>.
-              {emailDelivered
-                ? ' Check your Gmail inbox (and spam folder).'
-                : ' Enter the verification code below:'}
+            <p className={`text-xs leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+              We sent a 6-digit verification code to <strong className="text-sky-500">{email}</strong>.
             </p>
 
             {previewCode && (
-              <div className="p-3 rounded-xl bg-sky-400/10 border border-sky-400/30 flex items-center justify-between">
-                <span className="text-xs text-sky-300">
-                  Live Test OTP (add <code>RESEND_API_KEY</code> in Vercel for real Gmail delivery):
+              <div
+                className={`p-3 rounded-xl border flex items-center justify-between ${
+                  isDark ? 'bg-sky-500/10 border-sky-500/30' : 'bg-sky-50 border-sky-200'
+                }`}
+              >
+                <span className={`text-xs ${isDark ? 'text-sky-300' : 'text-sky-800'}`}>
+                  Live Preview Code:
                 </span>
                 <button
                   type="button"
                   onClick={() => setOtp(previewCode.split(''))}
-                  className="font-mono font-extrabold text-sm bg-sky-400 text-slate-950 px-2.5 py-1 rounded-lg"
+                  className="font-mono font-black text-xs bg-sky-500 text-white px-2.5 py-1 rounded-lg hover:bg-sky-400 transition"
                 >
-                  {previewCode} (Auto-fill)
+                  {previewCode} (Auto-Fill)
                 </button>
               </div>
             )}
@@ -340,7 +393,11 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
                   maxLength={1}
                   value={digit}
                   onChange={(e) => handleOtpChange(idx, e.target.value)}
-                  className="w-12 h-14 text-center text-xl font-extrabold font-mono rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-sky-400"
+                  className={`w-11 sm:w-12 h-14 text-center text-xl font-black font-mono rounded-xl border transition focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                    isDark
+                      ? 'bg-slate-950 border-slate-700 text-white'
+                      : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
                 />
               ))}
             </div>
@@ -348,7 +405,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 rounded-xl bg-sky-400 hover:bg-sky-300 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 transition"
+              className="w-full py-3.5 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-sky-500/25 transition active:scale-98"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -359,11 +416,21 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
               )}
             </button>
 
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <button type="button" onClick={() => setStep('email')} className="hover:text-white">
-                &larr; Change email
+            <div className="flex items-center justify-between text-xs pt-1">
+              <button
+                type="button"
+                onClick={() => setStep('email')}
+                className={`inline-flex items-center gap-1 font-medium hover:underline ${
+                  isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black'
+                }`}
+              >
+                <ArrowLeft className="w-3.5 h-3.5" /> Change email
               </button>
-              <button type="button" onClick={handleSendOtp} className="text-sky-400 hover:underline">
+              <button
+                type="button"
+                onClick={handleSendOtp}
+                className="text-sky-500 hover:underline font-semibold"
+              >
                 Resend code
               </button>
             </div>

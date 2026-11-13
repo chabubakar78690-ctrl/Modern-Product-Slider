@@ -1,11 +1,16 @@
 import { db, generateKey } from '../_db.js';
+import {
+  applySecurityHeaders,
+  getClientIp,
+  verifyAdminAccess,
+} from '../_security.js';
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  applySecurityHeaders(res);
+
   if (req.method === 'OPTIONS') return res.status(200).end();
 
+  // Handle Admin Mutation Actions
   if (req.method === 'POST') {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
     const { action, email, planId, status, domain } = body;
@@ -28,10 +33,11 @@ export default async function handler(req, res) {
       } else if (action === 'reset_sites') {
         target.activeSites = [];
       } else if (action === 'remove_site' && domain) {
-        target.activeSites = target.activeSites.filter((d) => d !== domain);
+        target.activeSites = (target.activeSites || []).filter((d) => d !== domain);
       } else if (action === 'delete_user') {
         db.users.delete(target.email);
       }
+      db.persist();
     }
   }
 
@@ -49,6 +55,6 @@ export default async function handler(req, res) {
     },
     users,
     transactions: db.transactions,
-    logs: db.logs.slice(0, 15),
+    logs: db.logs.slice(0, 20),
   });
 }
