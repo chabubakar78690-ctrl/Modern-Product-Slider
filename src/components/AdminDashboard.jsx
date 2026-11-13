@@ -956,20 +956,6 @@ export default function AdminDashboard({ isDark = true }) {
               </span>
             </div>
 
-            {/* Preview Code if sent */}
-            {previewCode && (
-              <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-between text-xs">
-                <span className="text-sky-300">Confirmation Code: <strong>{previewCode}</strong></span>
-                <button
-                  type="button"
-                  onClick={() => setConfirmCode(previewCode)}
-                  className="px-2.5 py-1 rounded-lg bg-sky-500 text-white font-mono font-bold text-xs"
-                >
-                  Auto-Fill
-                </button>
-              </div>
-            )}
-
             {/* Confirmation Code Input */}
             {codeSent && (
               <div>

@@ -34,23 +34,25 @@ import AuthModal from './components/AuthModal.jsx';
 import AdminDashboard from './components/AdminDashboard.jsx';
 import CheckoutModal from './components/CheckoutModal.jsx';
 import LandingPage from './components/LandingPage.jsx';
+import Loader from './components/Loader.jsx';
 
 const SESSION_KEY = 'mps_portal_session_v2';
 const THEME_KEY = 'mps_theme_preference';
 
 export default function App() {
-  const [user, setUser] = useState(null);
-  const [currentView, setCurrentView] = useState(() => {
+  const [user, setUser] = useState(() => {
     try {
       if (typeof window !== 'undefined') {
-        const hash = window.location.hash;
-        if (hash === '#dashboard' || hash === '#admin') return 'dashboard';
+        const saved = localStorage.getItem(SESSION_KEY);
+        if (saved) return JSON.parse(saved);
       }
     } catch {
       // ignore
     }
-    return 'landing';
+    return null;
   });
+
+  const [currentView, setCurrentView] = useState('landing');
   const [activeTab, setActiveTab] = useState('overview'); // overview | analytics | licenses | domains | plans | transactions | admin | logs | docs | settings
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
@@ -60,8 +62,15 @@ export default function App() {
   const [copied, setCopied] = useState('');
   const [newDomainInput, setNewDomainInput] = useState('');
   const [settingsSaved, setSettingsSaved] = useState(false);
+  const [liveLogs, setLiveLogs] = useState([]);
 
+  // Navigation Guard: Unauthenticated users are strictly barred from Dashboard
   const goToDashboard = (tab = 'overview') => {
+    if (!user) {
+      setAuthMode('login');
+      setAuthOpen(true);
+      return;
+    }
     setActiveTab(tab);
     setCurrentView('dashboard');
     try {
@@ -75,34 +84,73 @@ export default function App() {
     setCurrentView('landing');
     try {
       window.location.hash = '';
+      window.history.replaceState(null, '', window.location.pathname);
     } catch {
       // ignore
     }
   };
 
-  // Hash route synchronization
+  // Hash route synchronization with strict auth protection
   useEffect(() => {
     const handleHash = () => {
       try {
-        const hash = window.location.hash.replace(/^#/, '');
-        if (hash === 'dashboard' || hash === 'overview') {
+        const raw = window.location.hash.replace(/^#/, '').trim();
+        if (!raw || raw === 'landing' || raw === 'home') {
+          setCurrentView('landing');
+          return;
+        }
+
+        const validDashboardTabs = [
+          'overview',
+          'dashboard',
+          'analytics',
+          'licenses',
+          'domains',
+          'plans',
+          'transactions',
+          'admin',
+          'logs',
+          'docs',
+          'settings',
+        ];
+
+        if (validDashboardTabs.includes(raw)) {
+          if (!user) {
+            // Block unauthenticated access to dashboard
+            setCurrentView('landing');
+            setAuthMode('login');
+            setAuthOpen(true);
+            try {
+              window.history.replaceState(null, '', window.location.pathname);
+            } catch {
+              // ignore
+            }
+            return;
+          }
           setCurrentView('dashboard');
-          setActiveTab('overview');
-        } else if (hash === 'admin') {
-          setCurrentView('dashboard');
-          setActiveTab('admin');
-        } else if (['analytics', 'licenses', 'domains', 'plans', 'transactions', 'docs', 'settings'].includes(hash)) {
-          setCurrentView('dashboard');
-          setActiveTab(hash);
+          setActiveTab(raw === 'dashboard' ? 'overview' : raw);
+        } else {
+          // Unknown route -> render clean 404 page
+          setCurrentView('404');
         }
       } catch {
         // ignore
       }
     };
+
     handleHash();
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
-  }, []);
+  }, [user]);
+
+  // Protection Gatekeeper: if user is null, never stay on dashboard
+  useEffect(() => {
+    if (!user && currentView === 'dashboard') {
+      setCurrentView('landing');
+      setAuthMode('login');
+      setAuthOpen(true);
+    }
+  }, [user, currentView]);
 
   // Dual Theme Engine
   const [isDark, setIsDark] = useState(() => {
@@ -229,9 +277,119 @@ export default function App() {
     }
   };
 
+  const fetchAdminLogs = async () => {
+    try {
+      const res = await fetch('/api/v1/admin/overview');
+      const data = await res.json();
+      if (Array.isArray(data.logs)) {
+        setLiveLogs(data.logs);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'logs' && user?.role === 'admin') {
+      fetchAdminLogs();
+    }
+  }, [activeTab, user]);
+
   const isAdmin = user?.role === 'admin';
 
-  if (currentView === 'landing') {
+  // 404 Not Found Page with "Back to Home"
+  if (currentView === '404') {
+    return (
+      <div
+        className={`min-h-screen flex flex-col justify-between font-sans transition-colors duration-200 ${
+          isDark ? 'bg-[#060E1D] text-slate-100' : 'bg-[#F3F6FA] text-slate-900'
+        }`}
+      >
+        <header
+          className={`border-b py-4 px-6 sm:px-8 max-w-6xl w-full mx-auto flex items-center justify-between ${
+            isDark ? 'border-[#122449]' : 'border-slate-200'
+          }`}
+        >
+          <button onClick={goToLanding} className="focus:outline-none flex items-center">
+            <BrandLogo className="h-8" isDark={isDark} />
+          </button>
+          <button
+            onClick={() => setIsDark(!isDark)}
+            className={`p-2 rounded-xl border text-xs font-bold transition ${
+              isDark
+                ? 'border-slate-700 bg-[#0A162F] text-amber-400'
+                : 'border-slate-200 bg-white text-slate-700 shadow-sm'
+            }`}
+          >
+            {isDark ? 'Light Mode' : 'Dark Mode'}
+          </button>
+        </header>
+
+        <main className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-xl mx-auto space-y-6">
+          <div className="relative">
+            <span className="text-8xl sm:text-9xl font-black tracking-tighter bg-gradient-to-r from-[#0C1E3D] via-[#1E488F] to-sky-400 bg-clip-text text-transparent select-none">
+              404
+            </span>
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30">
+              Page Not Found
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h1 className={`text-2xl sm:text-3xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              Lost in the Cloud?
+            </h1>
+            <p className={`text-xs sm:text-sm leading-relaxed max-w-md mx-auto ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              The resource, link, or dashboard view you requested does not exist or requires an active session.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              onClick={goToLanding}
+              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#0C1E3D] to-[#1E488F] hover:from-[#102750] hover:to-[#2458AD] text-white font-extrabold text-xs shadow-lg shadow-[#0C1E3D]/30 border border-[#2555A8] transition active:scale-95 flex items-center gap-2"
+            >
+              Back to Home
+            </button>
+            <button
+              onClick={() => {
+                setAuthMode('login');
+                setAuthOpen(true);
+              }}
+              className={`px-6 py-3 rounded-2xl text-xs font-bold border transition ${
+                isDark
+                  ? 'border-slate-700 bg-[#0A162F] text-slate-300 hover:text-white'
+                  : 'border-slate-200 bg-white text-slate-700 shadow-sm'
+              }`}
+            >
+              Sign In to Portal
+            </button>
+          </div>
+        </main>
+
+        <footer
+          className={`border-t py-6 px-6 text-center text-xs ${
+            isDark ? 'border-[#122449] text-slate-500' : 'border-slate-200 text-slate-500'
+          }`}
+        >
+          &copy; 2026 Modern Product Slider SaaS. All rights reserved.
+        </footer>
+
+        {/* Auth Modal */}
+        <AuthModal
+          isOpen={authOpen}
+          onClose={() => setAuthOpen(false)}
+          initialMode={authMode}
+          selectedPlan={selectedPlan}
+          onSuccess={handleAuthCompleted}
+          isDark={isDark}
+        />
+      </div>
+    );
+  }
+
+  // Strictly Gate Dashboard: If not logged in, always render landing page
+  if (!user || currentView === 'landing') {
     return (
       <>
         <LandingPage
@@ -856,25 +1014,31 @@ export default function App() {
           {/* TAB 8: AUDIT LOGS */}
           {activeTab === 'logs' && isAdmin && (
             <div className="space-y-6 max-w-4xl">
-              <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                Security &amp; API Verification Logs
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Security &amp; API Verification Logs
+                </h2>
+                <button
+                  onClick={fetchAdminLogs}
+                  className="px-3 py-1.5 rounded-xl border border-sky-500/30 text-sky-400 text-xs font-bold hover:bg-sky-500/10 transition flex items-center gap-1.5"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Refresh Logs
+                </button>
+              </div>
               <div className={`p-6 rounded-3xl border space-y-3 font-mono text-xs ${isDark ? 'bg-[#071126] border-[#14284F] text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-sm'}`}>
-                <div className="flex items-center justify-between border-b border-slate-700/40 pb-2">
-                  <span className="font-bold text-emerald-400">✓ License Verified</span>
-                  <span className="text-slate-400">modern-product-slider.vercel.app</span>
-                  <span className="text-[11px] text-slate-500">Just now</span>
-                </div>
-                <div className="flex items-center justify-between border-b border-slate-700/40 pb-2">
-                  <span className="font-bold text-sky-400">ℹ Super Admin Signed In</span>
-                  <span className="text-slate-400">admin@modernproductslider.com</span>
-                  <span className="text-[11px] text-slate-500">3 mins ago</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-emerald-400">✓ Domain Connected</span>
-                  <span className="text-slate-400">sarahstreetwear.com</span>
-                  <span className="text-[11px] text-slate-500">1 hour ago</span>
-                </div>
+                {liveLogs && liveLogs.length > 0 ? (
+                  liveLogs.map((log) => (
+                    <div key={log.id} className="flex items-center justify-between border-b border-slate-700/40 pb-2 last:border-b-0">
+                      <span className={`font-bold ${log.ok ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {log.ok ? '✓' : 'ℹ'} {log.event}
+                      </span>
+                      <span className="text-slate-400 truncate max-w-sm">{log.detail}</span>
+                      <span className="text-[11px] text-slate-500 shrink-0">{log.time || 'Recent'}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-4 text-center text-slate-500 italic">No security events recorded yet.</div>
+                )}
               </div>
             </div>
           )}

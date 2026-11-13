@@ -21,15 +21,14 @@ export default function AuthModal({
   onSuccess,
   isDark = true,
 }) {
-  const [authType, setAuthType] = useState('customer'); // 'customer' | 'admin'
-  const [mode, setMode] = useState(initialMode); // login | signup
-  const [step, setStep] = useState('email'); // email | otp
+  const [mode, setMode] = useState(initialMode); // 'login' | 'signup'
+  const [step, setStep] = useState('input'); // 'input' | 'otp'
+  const [authMethod, setAuthMethod] = useState('password'); // 'password' | 'otp'
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('Admin@MPS2026!');
+  const [password, setPassword] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [otpToken, setOtpToken] = useState('');
-  const [previewCode, setPreviewCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const googleBtnRef = useRef(null);
@@ -37,17 +36,10 @@ export default function AuthModal({
 
   useEffect(() => {
     setMode(initialMode === 'admin' ? 'login' : initialMode);
-    if (initialMode === 'admin') {
-      setAuthType('admin');
-      setEmail('admin@modernproductslider.com');
-      setAdminPassword('Admin@MPS2026!');
-    } else {
-      setAuthType('customer');
-    }
-    setStep('email');
+    setStep('input');
     setError('');
+    setPassword('');
     setOtp(['', '', '', '', '', '']);
-    setPreviewCode('');
   }, [initialMode, isOpen]);
 
   // Real Google Identity Services initialization
@@ -86,11 +78,12 @@ export default function AuthModal({
 
   if (!isOpen) return null;
 
-  const handleSimulatedGoogleSignIn = async () => {
-    const gmail =
-      email.trim() ||
-      window.prompt('Enter your Google / Gmail address to continue:', 'alex.store@gmail.com');
-    if (!gmail) return;
+  const handleGoogleSignInClick = async () => {
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setError('Please enter your Google / Gmail address in the email field first.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -98,32 +91,83 @@ export default function AuthModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: gmail,
-          name: name.trim() || gmail.split('@')[0].replace(/[._]/g, ' '),
+          email: cleanEmail,
+          name: name.trim() || cleanEmail.split('@')[0].replace(/[._]/g, ' '),
         }),
       });
       const data = await res.json();
       if (data.success) {
         onSuccess(data.user);
       } else {
-        setError(data.error || 'Could not sign in with Google.');
+        setError(data.error || 'Could not sign in with Google ID.');
       }
     } catch {
-      setError('Network error while connecting to Google.');
+      setError('Network error while connecting to Google authentication.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordLogin = async (e) => {
+    e.preventDefault();
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !password) {
+      setError('Please enter both email and password.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      // 1. Check if matching Super Admin or credentials login
+      const adminRes = await fetch('/api/v1/auth/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: cleanEmail,
+          password: password.trim(),
+        }),
+      });
+
+      if (adminRes.ok) {
+        const adminData = await adminRes.json();
+        if (adminData.success && adminData.user) {
+          onSuccess(adminData.user);
+          return;
+        }
+      }
+
+      // 2. If not admin, check if customer account exists or notify to use code
+      const adminData = await adminRes.json().catch(() => ({}));
+      if (cleanEmail === 'admin@modernproductslider.com') {
+        setError(adminData.error || 'Incorrect password.');
+        return;
+      }
+
+      // For standard customers, send code or prompt code login
+      setError('Invalid credentials. If you are a customer, please sign in with a 6-digit email code.');
+    } catch {
+      setError('Connection error during authentication.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleSendOtp = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setError('Please enter your email address.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
       const res = await fetch('/api/v1/auth/send-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name }),
+        body: JSON.stringify({ email: cleanEmail, name }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -131,37 +175,10 @@ export default function AuthModal({
         return;
       }
       setOtpToken(data.otpToken || '');
-      setPreviewCode(data.previewCode || '');
       setStep('otp');
-      setTimeout(() => otpRefs.current[0]?.focus(), 80);
+      setTimeout(() => otpRefs.current[0]?.focus(), 100);
     } catch {
-      setError('Network error sending code.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAdminPasswordLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/v1/auth/admin-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email.trim(),
-          password: adminPassword,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || 'Invalid Super Admin credentials.');
-        return;
-      }
-      onSuccess(data.user);
-    } catch {
-      setError('Network error during admin login.');
+      setError('Network error sending verification code.');
     } finally {
       setLoading(false);
     }
@@ -189,7 +206,7 @@ export default function AuthModal({
     e.preventDefault();
     const code = otp.join('');
     if (code.length !== 6) {
-      setError('Enter the full 6-digit verification code.');
+      setError('Please enter the full 6-digit verification code.');
       return;
     }
     setLoading(true);
@@ -198,11 +215,11 @@ export default function AuthModal({
       const res = await fetch('/api/v1/auth/verify-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code, name, otpToken }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), code, name, otpToken }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Invalid verification code.');
+        setError(data.error || 'Invalid or expired verification code.');
         return;
       }
       onSuccess(data.user);
@@ -216,7 +233,7 @@ export default function AuthModal({
   const hasRealGoogleClient = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#050D1A]/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-[#050D1A]/85 backdrop-blur-md flex items-center justify-center p-4">
       <div
         className={`rounded-3xl max-w-md w-full p-8 relative shadow-2xl border transition-all ${
           isDark
@@ -238,56 +255,54 @@ export default function AuthModal({
         </button>
 
         {/* Modal Brand Header */}
-        <div className="mb-5">
-          <div className="mb-3">
+        <div className="mb-6">
+          <div className="mb-4">
             <BrandLogo className="h-8" isDark={isDark} />
           </div>
 
-          {/* Quick Tab Switcher between Customer & Super Admin */}
+          {/* Clean Public Tab Switcher: Only Log In & Sign Up */}
           <div className={`p-1 rounded-xl border flex mb-4 ${isDark ? 'bg-[#071126] border-[#14284F]' : 'bg-slate-100 border-slate-200'}`}>
             <button
               type="button"
               onClick={() => {
-                setAuthType('customer');
+                setMode('login');
+                setStep('input');
                 setError('');
               }}
               className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${
-                authType === 'customer'
+                mode === 'login'
                   ? 'bg-gradient-to-r from-[#0C1E3D] to-[#1E488F] text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Customer Sign In
+              Log In
             </button>
             <button
               type="button"
               onClick={() => {
-                setAuthType('admin');
-                setEmail('admin@modernproductslider.com');
-                setAdminPassword('Admin@MPS2026!');
+                setMode('signup');
+                setStep('input');
                 setError('');
               }}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 ${
-                authType === 'admin'
+              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${
+                mode === 'signup'
                   ? 'bg-gradient-to-r from-[#0C1E3D] to-[#1E488F] text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-amber-400" /> Super Admin
+              Sign Up
             </button>
           </div>
 
           <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-            {authType === 'admin'
-              ? 'Super Admin Portal Access'
-              : step === 'otp'
+            {step === 'otp'
               ? 'Enter Verification Code'
               : mode === 'signup'
               ? 'Create Your Pro Account'
               : 'Sign in to Your Account'}
           </h2>
 
-          {selectedPlan && authType !== 'admin' && (
+          {selectedPlan && (
             <p className={`text-xs mt-1 font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               Proceeding with{' '}
               <strong className="text-sky-400">
@@ -303,74 +318,15 @@ export default function AuthModal({
           </div>
         )}
 
-        {/* 1. SUPER ADMIN LOGIN FORM */}
-        {authType === 'admin' ? (
-          <form onSubmit={handleAdminPasswordLogin} className="space-y-4">
-            <div>
-              <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                Super Admin Email
-              </label>
-              <div className="relative">
-                <Mail className={`w-4 h-4 absolute left-3.5 top-3.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@modernproductslider.com"
-                  className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs font-mono transition focus:outline-none focus:ring-2 focus:ring-[#1E488F] ${
-                    isDark ? 'bg-[#050D1A] border-[#14284F] text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                  }`}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                Super Admin Password
-              </label>
-              <div className="relative">
-                <Lock className={`w-4 h-4 absolute left-3.5 top-3.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
-                <input
-                  type="password"
-                  required
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="Admin@MPS2026!"
-                  className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs font-mono transition focus:outline-none focus:ring-2 focus:ring-[#1E488F] ${
-                    isDark ? 'bg-[#050D1A] border-[#14284F] text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                  }`}
-                />
-              </div>
-              <span className="text-[10px] text-slate-500 mt-1 block">
-                Default: <code>Admin@MPS2026!</code> (Change anytime from Super Admin Dashboard)
-              </span>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#0C1E3D] to-[#1E488F] hover:from-[#102750] hover:to-[#2458AD] text-white font-black text-xs shadow-md border border-[#2555A8] transition active:scale-98 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <ShieldCheck className="w-4 h-4 text-amber-400" /> Log In to Super Admin Dashboard
-                </>
-              )}
-            </button>
-          </form>
-        ) : step === 'email' ? (
-          /* 2. CUSTOMER SIGN IN / SIGN UP */
+        {step === 'input' ? (
           <div className="space-y-4">
-            {/* Google OAuth Button */}
+            {/* Google Identity Sign In */}
             {hasRealGoogleClient ? (
               <div ref={googleBtnRef} className="flex justify-center" />
             ) : (
               <button
                 type="button"
-                onClick={handleSimulatedGoogleSignIn}
+                onClick={handleGoogleSignInClick}
                 disabled={loading}
                 className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2.5 transition border shadow-sm ${
                   isDark
@@ -391,14 +347,132 @@ export default function AuthModal({
             <div className="relative flex items-center py-0.5">
               <div className={`flex-grow border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`} />
               <span className={`shrink mx-3 text-[10px] uppercase tracking-wider font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                or email verification code
+                or continue with email
               </span>
               <div className={`flex-grow border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`} />
             </div>
 
-            {/* Email OTP Request Form */}
-            <form onSubmit={handleSendOtp} className="space-y-3">
-              {mode === 'signup' && (
+            {/* Main Form */}
+            {mode === 'login' ? (
+              /* LOGIN FORM (Password with automatic Admin detection or Code toggle) */
+              authMethod === 'password' ? (
+                <form onSubmit={handlePasswordLogin} className="space-y-3.5">
+                  <div>
+                    <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <Mail className={`w-4 h-4 absolute left-3.5 top-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@store.com"
+                        className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs transition focus:outline-none focus:ring-2 focus:ring-[#1E488F] ${
+                          isDark ? 'bg-[#050D1A] border-[#14284F] text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className={`block text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Password
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthMethod('otp');
+                          setError('');
+                        }}
+                        className="text-[11px] text-sky-400 hover:underline font-semibold"
+                      >
+                        Sign in with email code instead
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Lock className={`w-4 h-4 absolute left-3.5 top-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                      <input
+                        type="password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••••••"
+                        className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs font-mono transition focus:outline-none focus:ring-2 focus:ring-[#1E488F] ${
+                          isDark ? 'bg-[#050D1A] border-[#14284F] text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#0C1E3D] to-[#1E488F] hover:from-[#102750] hover:to-[#2458AD] text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md border border-[#2555A8] transition active:scale-98"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        Sign In <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                /* LOGIN VIA EMAIL CODE */
+                <form onSubmit={handleSendOtp} className="space-y-3.5">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className={`block text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Email Address
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthMethod('password');
+                          setError('');
+                        }}
+                        className="text-[11px] text-sky-400 hover:underline font-semibold"
+                      >
+                        Sign in with password
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Mail className={`w-4 h-4 absolute left-3.5 top-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@store.com"
+                        className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs transition focus:outline-none focus:ring-2 focus:ring-[#1E488F] ${
+                          isDark ? 'bg-[#050D1A] border-[#14284F] text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#0C1E3D] to-[#1E488F] hover:from-[#102750] hover:to-[#2458AD] text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md border border-[#2555A8] transition active:scale-98"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        Send 6-Digit Code <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              )
+            ) : (
+              /* SIGN UP FORM */
+              <form onSubmit={handleSendOtp} className="space-y-3">
                 <div>
                   <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                     Full Name
@@ -414,46 +488,49 @@ export default function AuthModal({
                     }`}
                   />
                 </div>
-              )}
 
-              <div>
-                <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Gmail / Email Address
-                </label>
-                <div className="relative">
-                  <Mail className={`w-4 h-4 absolute left-3.5 top-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@store.com"
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs transition focus:outline-none focus:ring-2 focus:ring-[#1E488F] ${
-                      isDark ? 'bg-[#050D1A] border-[#14284F] text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                    }`}
-                  />
+                <div>
+                  <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Gmail / Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className={`w-4 h-4 absolute left-3.5 top-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@store.com"
+                      className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs transition focus:outline-none focus:ring-2 focus:ring-[#1E488F] ${
+                        isDark ? 'bg-[#050D1A] border-[#14284F] text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                      }`}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#0C1E3D] to-[#1E488F] hover:from-[#102750] hover:to-[#2458AD] text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md border border-[#2555A8] transition active:scale-98"
-              >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    Send 6-Digit Code <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#0C1E3D] to-[#1E488F] hover:from-[#102750] hover:to-[#2458AD] text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md border border-[#2555A8] transition active:scale-98"
+                >
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      Send 6-Digit Code <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
 
-            <div className="pt-1 flex items-center justify-between text-xs">
+            <div className="pt-2 flex items-center justify-between text-xs">
               <button
                 type="button"
-                onClick={() => setMode(mode === 'signup' ? 'login' : 'signup')}
+                onClick={() => {
+                  setMode(mode === 'signup' ? 'login' : 'signup');
+                  setError('');
+                }}
                 className="text-sky-400 hover:underline font-semibold"
               >
                 {mode === 'signup' ? 'Already registered? Sign in' : 'New store? Create account'}
@@ -466,21 +543,6 @@ export default function AuthModal({
             <p className={`text-xs leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
               We sent a 6-digit verification code to <strong className="text-sky-400">{email}</strong>.
             </p>
-
-            {previewCode && (
-              <div className={`p-3 rounded-xl border flex items-center justify-between ${isDark ? 'bg-[#071126] border-[#14284F]' : 'bg-sky-50 border-sky-200'}`}>
-                <span className={`text-xs ${isDark ? 'text-sky-300' : 'text-sky-800'}`}>
-                  Live Preview Code: <strong>{previewCode}</strong>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setOtp(previewCode.split(''))}
-                  className="font-mono font-black text-xs bg-[#0C1E3D] text-white px-2.5 py-1 rounded-lg border border-[#1E488F]"
-                >
-                  Auto-Fill
-                </button>
-              </div>
-            )}
 
             <div className="flex justify-between gap-2" onPaste={handleOtpPaste}>
               {otp.map((digit, idx) => (
@@ -516,10 +578,10 @@ export default function AuthModal({
             <div className="flex items-center justify-between text-xs pt-1">
               <button
                 type="button"
-                onClick={() => setStep('email')}
+                onClick={() => setStep('input')}
                 className={`inline-flex items-center gap-1 font-medium hover:underline ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black'}`}
               >
-                <ArrowLeft className="w-3.5 h-3.5" /> Change email
+                <ArrowLeft className="w-3.5 h-3.5" /> Back
               </button>
               <button
                 type="button"

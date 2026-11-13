@@ -50,17 +50,7 @@ const SEED_USERS = [
   },
 ];
 
-const SEED_TXNS = [
-  {
-    id: 'TXN-1001',
-    email: (process.env.ADMIN_EMAIL || 'admin@modernproductslider.com').toLowerCase(),
-    plan: 'Unlimited Sites ($10/mo)',
-    amount: 10,
-    method: 'Mastercard & Visa 3D Secure',
-    status: 'Paid',
-    date: new Date().toISOString().slice(0, 10),
-  },
-];
+const SEED_TXNS = [];
 
 const SEED_LOGS = [
   { id: 1, event: 'System Initialized', detail: 'Modern Product Slider Pro Cloud API Online', time: 'Just now', ok: true },
@@ -165,9 +155,9 @@ export function findUserByApiKey(apiKey = '') {
     }
   }
 
-  // Stateless Vercel cold-start fallback using key prefix conventions
-  if (apiKey.startsWith('mps_live_s1_') || apiKey === 'mps_test_single_3usd') {
-    const email = apiKey === 'mps_test_single_3usd' ? 'sarah.boutique@gmail.com' : `client_${apiKey.slice(-6)}@customer.com`;
+  // Stateless Vercel cold-start fallback using cryptographically generated keys
+  if (apiKey.startsWith('mps_live_s1_')) {
+    const email = `client_${apiKey.slice(-6)}@store.com`;
     let user = globalStore.users.get(email);
     if (!user) {
       user = {
@@ -191,8 +181,8 @@ export function findUserByApiKey(apiKey = '') {
     return user;
   }
 
-  if (apiKey.startsWith('mps_live_un_') || apiKey === 'mps_test_unlimited_10usd') {
-    const email = apiKey === 'mps_test_unlimited_10usd' ? 'admin@modernproductslider.com' : `agency_${apiKey.slice(-6)}@client.com`;
+  if (apiKey.startsWith('mps_live_un_')) {
+    const email = `agency_${apiKey.slice(-6)}@store.com`;
     let user = globalStore.users.get(email);
     if (!user) {
       user = {

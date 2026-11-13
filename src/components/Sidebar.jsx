@@ -104,7 +104,11 @@ export default function Sidebar({
       </div>
 
       {/* Navigation Groups List */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+      <div
+        className={`flex-1 px-3 py-4 space-y-6 ${
+          isCollapsed ? 'overflow-visible' : 'overflow-y-auto'
+        }`}
+      >
         {navGroups.map((g) => (
           <div key={g.group} className="space-y-1">
             {!isCollapsed && (
@@ -150,7 +154,7 @@ export default function Sidebar({
 
                   {/* Tooltip on Collapsed Mode */}
                   {isCollapsed && (
-                    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#0C1E3D] text-white text-xs font-semibold rounded-xl shadow-2xl border border-slate-700/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50">
+                    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#0C1E3D] text-white text-xs font-semibold rounded-xl shadow-2xl border border-slate-700/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 drop-shadow-2xl">
                       {item.label}
                       {item.badge && (
                         <span className="ml-2 text-[9px] font-bold text-amber-400 uppercase">
