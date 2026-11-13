@@ -22,108 +22,48 @@ const globalStore = globalThis.__MPS_SAAS_STORE__ || {
   transactions: [],
   logs: [],
   externalApis: [],
+  adminAuth: {
+    email: (process.env.ADMIN_EMAIL || 'admin@modernproductslider.com').toLowerCase(),
+    passwordHash: crypto.createHash('sha256').update(process.env.ADMIN_PASSWORD || 'Admin@MPS2026!').digest('hex'),
+    lastChangedAt: new Date().toISOString(),
+  },
   initialized: false,
 };
 globalThis.__MPS_SAAS_STORE__ = globalStore;
 
-// Default seed data for initial setup
+// Default production Super Admin user
 const SEED_USERS = [
   {
     id: 'usr_admin_01',
-    name: 'Founder & Admin',
-    email: 'admin@modernproductslider.com',
+    name: 'Super Admin',
+    email: (process.env.ADMIN_EMAIL || 'admin@modernproductslider.com').toLowerCase(),
     role: 'admin',
-    provider: 'email',
+    provider: 'Super Admin Credentials',
     planId: 'unlimited',
     planName: 'Unlimited Sites ($10/mo)',
     price: 10,
-    apiKey: 'mps_live_un_founder_key_2026',
+    apiKey: 'mps_live_un_super_admin_key_2026',
     maxSites: -1,
-    activeSites: ['modern-product-slider.vercel.app', 'demo.woocommerce-showcase.com'],
+    activeSites: ['modern-product-slider.vercel.app'],
     status: 'active',
-    createdAt: '2026-11-01T10:00:00Z',
-  },
-  {
-    id: 'usr_02',
-    name: 'Sarah Jenkins',
-    email: 'sarah.boutique@gmail.com',
-    role: 'customer',
-    provider: 'google',
-    planId: 'single',
-    planName: 'Single Site ($3/mo)',
-    price: 3,
-    apiKey: 'mps_test_single_3usd',
-    maxSites: 1,
-    activeSites: ['sarahstreetwear.com'],
-    status: 'active',
-    createdAt: '2026-11-05T14:22:00Z',
-  },
-  {
-    id: 'usr_03',
-    name: 'Marcus Vance',
-    email: 'marcus.studio@gmail.com',
-    role: 'customer',
-    provider: 'email',
-    planId: 'unlimited',
-    planName: 'Unlimited Sites ($10/mo)',
-    price: 10,
-    apiKey: 'mps_live_un_98a7f6d5e4c3b2a190817263',
-    maxSites: -1,
-    activeSites: ['vanceapparel.co', 'atelier-nord.shop', 'kinetixwear.com'],
-    status: 'active',
-    createdAt: '2026-11-09T09:15:00Z',
-  },
-  {
-    id: 'usr_04',
-    name: 'Elena Rodriguez',
-    email: 'elena.rodriguez@gmail.com',
-    role: 'customer',
-    provider: 'google',
-    planId: 'free',
-    planName: 'Free Edition ($0/mo)',
-    price: 0,
-    apiKey: '',
-    maxSites: 0,
-    activeSites: [],
-    status: 'active',
-    createdAt: '2026-11-12T18:40:00Z',
+    createdAt: new Date().toISOString(),
   },
 ];
 
 const SEED_TXNS = [
   {
-    id: 'TXN-9041',
-    email: 'marcus.studio@gmail.com',
+    id: 'TXN-1001',
+    email: (process.env.ADMIN_EMAIL || 'admin@modernproductslider.com').toLowerCase(),
     plan: 'Unlimited Sites ($10/mo)',
     amount: 10,
-    method: 'Stripe •••• 4242',
+    method: 'Mastercard & Visa 3D Secure',
     status: 'Paid',
-    date: '2026-11-09',
-  },
-  {
-    id: 'TXN-9040',
-    email: 'sarah.boutique@gmail.com',
-    plan: 'Single Site ($3/mo)',
-    amount: 3,
-    method: 'Apple Pay',
-    status: 'Paid',
-    date: '2026-11-05',
-  },
-  {
-    id: 'TXN-9039',
-    email: 'admin@modernproductslider.com',
-    plan: 'Unlimited Sites ($10/mo)',
-    amount: 10,
-    method: 'Founder License',
-    status: 'Paid',
-    date: '2026-11-01',
+    date: new Date().toISOString().slice(0, 10),
   },
 ];
 
 const SEED_LOGS = [
-  { id: 1, event: 'License Verified', detail: 'mps_test_single_3usd → sarahstreetwear.com', time: '12 mins ago', ok: true },
-  { id: 2, event: 'OTP Code Sent', detail: 'marcus.studio@gmail.com verified via Gmail OTP', time: '1 hour ago', ok: true },
-  { id: 3, event: 'License Verified', detail: 'mps_live_un_98a7... → vanceapparel.co', time: '3 hours ago', ok: true },
+  { id: 1, event: 'System Initialized', detail: 'Modern Product Slider Pro Cloud API Online', time: 'Just now', ok: true },
 ];
 
 /**
@@ -186,6 +126,7 @@ export const db = {
   transactions: globalStore.transactions,
   logs: globalStore.logs,
   externalApis: globalStore.externalApis,
+  adminAuth: globalStore.adminAuth,
   persist: persistLocal,
 };
 

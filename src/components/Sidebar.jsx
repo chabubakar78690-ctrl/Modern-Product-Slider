@@ -54,17 +54,13 @@ export default function Sidebar({
         { id: 'transactions', label: 'Invoices & Receipts', icon: Receipt },
       ],
     },
-    ...(isAdmin
-      ? [
-          {
-            group: 'SUPER ADMIN',
-            items: [
-              { id: 'admin', label: 'Operations & APIs', icon: ShieldCheck, badge: 'Admin' },
-              { id: 'logs', label: 'Audit & API Logs', icon: Activity },
-            ],
-          },
-        ]
-      : []),
+    {
+      group: 'SUPER ADMIN',
+      items: [
+        { id: 'admin', label: 'Operations & APIs', icon: ShieldCheck, badge: 'Admin' },
+        { id: 'logs', label: 'Audit & API Logs', icon: Activity },
+      ],
+    },
     {
       group: 'RESOURCES',
       items: [

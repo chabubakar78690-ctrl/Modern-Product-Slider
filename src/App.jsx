@@ -61,6 +61,49 @@ export default function App() {
   const [newDomainInput, setNewDomainInput] = useState('');
   const [settingsSaved, setSettingsSaved] = useState(false);
 
+  const goToDashboard = (tab = 'overview') => {
+    setActiveTab(tab);
+    setCurrentView('dashboard');
+    try {
+      window.location.hash = '#' + tab;
+    } catch {
+      // ignore
+    }
+  };
+
+  const goToLanding = () => {
+    setCurrentView('landing');
+    try {
+      window.location.hash = '';
+    } catch {
+      // ignore
+    }
+  };
+
+  // Hash route synchronization
+  useEffect(() => {
+    const handleHash = () => {
+      try {
+        const hash = window.location.hash.replace(/^#/, '');
+        if (hash === 'dashboard' || hash === 'overview') {
+          setCurrentView('dashboard');
+          setActiveTab('overview');
+        } else if (hash === 'admin') {
+          setCurrentView('dashboard');
+          setActiveTab('admin');
+        } else if (['analytics', 'licenses', 'domains', 'plans', 'transactions', 'docs', 'settings'].includes(hash)) {
+          setCurrentView('dashboard');
+          setActiveTab(hash);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
   // Dual Theme Engine
   const [isDark, setIsDark] = useState(() => {
     try {
@@ -193,10 +236,10 @@ export default function App() {
       <>
         <LandingPage
           user={user}
-          onGoToDashboard={() => setCurrentView('dashboard')}
+          onGoToDashboard={() => goToDashboard('overview')}
           onSelectPlan={(planId) => {
             handleBuyPlan(planId);
-            setCurrentView('dashboard');
+            goToDashboard('plans');
           }}
           onOpenAuth={(mode) => {
             setAuthMode(mode);
@@ -224,8 +267,7 @@ export default function App() {
           user={user}
           onSuccess={(updatedUser) => {
             saveSession(updatedUser);
-            setActiveTab('licenses');
-            setCurrentView('dashboard');
+            goToDashboard('licenses');
           }}
           isDark={isDark}
         />
@@ -295,7 +337,7 @@ export default function App() {
           <div className="flex items-center gap-3">
             {/* Quick Switcher to Landing Page */}
             <button
-              onClick={() => setCurrentView('landing')}
+              onClick={goToLanding}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border ${
                 isDark
                   ? 'border-slate-700/60 bg-[#0A162F] text-slate-300 hover:text-white hover:bg-[#0E2044]'
@@ -695,7 +737,7 @@ export default function App() {
                   <div>
                     <span className="text-xs font-black uppercase tracking-wider text-slate-400">Single Store</span>
                     <div className="flex items-baseline gap-1 mt-2 mb-1">
-                      <span className="text-4xl font-black text-sky-400">$3</span>
+                      <span className={`text-4xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>$3</span>
                       <span className="text-xs text-slate-400">/month</span>
                     </div>
                     <span className="text-xs font-bold text-sky-400 block mb-4">~₨ 850 PKR / month</span>
@@ -720,9 +762,9 @@ export default function App() {
                     Best Value
                   </span>
                   <div>
-                    <span className="text-xs font-black uppercase tracking-wider text-sky-400">Unlimited Sites</span>
+                    <span className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-sky-400' : 'text-[#0C1E3D]'}`}>Unlimited Sites</span>
                     <div className="flex items-baseline gap-1 mt-2 mb-1">
-                      <span className="text-4xl font-black text-white">$10</span>
+                      <span className={`text-4xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>$10</span>
                       <span className="text-xs text-slate-400">/month</span>
                     </div>
                     <span className="text-xs font-bold text-emerald-400 block mb-4">~₨ 2,800 PKR / month</span>
@@ -782,7 +824,34 @@ export default function App() {
           )}
 
           {/* TAB 7: SUPER ADMIN OPERATIONS & APIS */}
-          {activeTab === 'admin' && isAdmin && <AdminDashboard isDark={isDark} />}
+          {activeTab === 'admin' && (
+            isAdmin ? (
+              <AdminDashboard isDark={isDark} />
+            ) : (
+              <div className={`max-w-xl mx-auto my-12 p-8 rounded-3xl border text-center space-y-4 ${isDark ? 'bg-[#071126] border-[#14284F]' : 'bg-white border-slate-200 shadow-sm'}`}>
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <h3 className={`text-xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Super Admin Authentication Required
+                </h3>
+                <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'} leading-relaxed`}>
+                  Access to Cloud APIs, Google Auth credentials, client license keys, and financial reports is restricted to authorized super administrators.
+                </p>
+                <div className="pt-2">
+                  <button
+                    onClick={() => {
+                      setAuthMode('admin');
+                      setAuthOpen(true);
+                    }}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#0C1E3D] to-[#1E488F] hover:from-[#102750] hover:to-[#2458AD] text-white font-extrabold text-xs shadow-md border border-[#2555A8] transition"
+                  >
+                    Sign In as Super Admin
+                  </button>
+                </div>
+              </div>
+            )
+          )}
 
           {/* TAB 8: AUDIT LOGS */}
           {activeTab === 'logs' && isAdmin && (
