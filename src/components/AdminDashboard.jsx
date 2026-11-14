@@ -882,6 +882,27 @@ export default function AdminDashboard({ isDark = true }) {
                 <p>5. Click <strong>Add New API</strong> above, select <em>Cloudflare API</em>, and paste your Secret Token.</p>
               </div>
             </div>
+
+            {/* Guide 3: Safepay Official Payment Gateway Setup */}
+            <div className={`p-6 rounded-3xl border space-y-4 md:col-span-2 ${isDark ? 'bg-[#071126] border-[#14284F]' : 'bg-white border-slate-200 shadow-sm'}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-sky-400" />
+                  <h4 className="font-bold text-sm">Safepay Payment Gateway Activation (Pakistan &amp; International)</h4>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                  Official Merchant API
+                </span>
+              </div>
+
+              <div className="text-xs space-y-2.5 text-slate-300">
+                <p>1. <strong>Sign Up:</strong> Register your merchant account on <a href="https://getsafepay.com" target="_blank" rel="noreferrer" className="text-sky-400 underline">getsafepay.com</a> (Sandbox portal: <a href="https://sandbox.api.getsafepay.com" target="_blank" rel="noreferrer" className="text-sky-400 underline">sandbox.api.getsafepay.com</a>).</p>
+                <p>2. <strong>KYC Verification:</strong> Submit your business documents (NTN, CNIC, and Bank Statement) to enable live processing for Visa, Mastercard, and Mobile Wallets.</p>
+                <p>3. <strong>Copy API Keys:</strong> Under <strong>Developers &rarr; API Keys</strong>, copy your <code>Merchant API Key (sec_...)</code> and <code>Shared Secret Key</code>.</p>
+                <p>4. <strong>Configure Webhook:</strong> In Safepay Dashboard &rarr; Webhooks, add your endpoint: <code>https://your-domain.com/api/v1/payments/webhook</code>.</p>
+                <p>5. <strong>Paste Credentials:</strong> Add them in your backend environment variables (<code>SAFEPAY_API_KEY</code>, <code>SAFEPAY_V1_SECRET_KEY</code>, <code>SAFEPAY_WEBHOOK_SECRET</code>).</p>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1012,9 +1033,9 @@ export default function AdminDashboard({ isDark = true }) {
       {/* TAB 5: PLATFORM PAYMENTS & TRANSACTIONS */}
       {tab === 'transactions' && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2 text-xs flex-wrap">
             <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>Platform Gateway:</span>
-            {['all', 'mastercard', 'bank', 'google', 'jazzcash', 'easypaisa', 'sadapay'].map((m) => (
+            {['all', 'safepay', 'mastercard', 'bank', 'google', 'jazzcash', 'easypaisa', 'sadapay'].map((m) => (
               <button
                 key={m}
                 onClick={() => setMethodFilter(m)}

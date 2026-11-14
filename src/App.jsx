@@ -35,6 +35,7 @@ import AdminDashboard from './components/AdminDashboard.jsx';
 import CheckoutModal from './components/CheckoutModal.jsx';
 import LandingPage from './components/LandingPage.jsx';
 import Loader from './components/Loader.jsx';
+import PaymentStatusView from './components/PaymentStatusView.jsx';
 
 const SESSION_KEY = 'mps_portal_session_v2';
 const THEME_KEY = 'mps_theme_preference';
@@ -95,6 +96,19 @@ export default function App() {
     const handleHash = () => {
       try {
         const raw = window.location.hash.replace(/^#/, '').trim();
+        const search = window.location.search || '';
+
+        // Safepay Checkout Outcome Detection
+        if (raw.startsWith('payment-success') || search.includes('beacon=') || search.includes('order_id=')) {
+          setCurrentView('payment-success');
+          return;
+        }
+
+        if (raw.startsWith('payment-cancel') || raw.startsWith('cancel') || search.includes('status=cancelled')) {
+          setCurrentView('payment-cancel');
+          return;
+        }
+
         if (!raw || raw === 'landing' || raw === 'home') {
           setCurrentView('landing');
           return;
@@ -296,6 +310,26 @@ export default function App() {
   }, [activeTab, user]);
 
   const isAdmin = user?.role === 'admin';
+
+  // Safepay Payment Outcome Handlers (Success & Cancel)
+  if (currentView === 'payment-success' || currentView === 'payment-cancel') {
+    return (
+      <PaymentStatusView
+        type={currentView === 'payment-success' ? 'success' : 'cancel'}
+        user={user}
+        onPaymentVerified={(updatedUser) => {
+          saveSession(updatedUser);
+        }}
+        onGoToDashboard={() => goToDashboard('licenses')}
+        onGoToLanding={goToLanding}
+        onRetryCheckout={() => {
+          setCurrentView('landing');
+          setCheckoutPlan('unlimited');
+        }}
+        isDark={isDark}
+      />
+    );
+  }
 
   // 404 Not Found Page with "Back to Home"
   if (currentView === '404') {
