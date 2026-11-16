@@ -58,7 +58,7 @@ function TestimonialCarousel() {
   return (
     <div className="t-carousel">
       {TESTIMONIALS.map((col, ci) => (
-        <div className={`t-col ${ci === 1 ? 'center' : ''}`} key={ci}>
+        <div className={`t-col ${ci === 1 ? 'middle' : ''}`} key={ci}>
           <div className={`t-track ${ci === 1 ? 'up' : 'down'}`}>
             {[...col, ...col].map((t, i) => (
               <TestimonialCard t={t} key={`${ci}-${i}`} />
