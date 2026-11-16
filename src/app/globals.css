@@ -173,14 +173,14 @@ h3{font-size:20px;margin:0 0 8px;color:var(--navy)}
 .t-carousel:hover .t-track{animation-play-state:paused}
 .t-card{border:1px solid var(--line);border-radius:20px;padding:24px;background:#fff;box-shadow:0 10px 30px rgba(8,26,61,.06);transition:transform .25s ease,box-shadow .25s ease;text-align:left}
 .t-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
-.t-person{display:flex;gap:12px;align-items:center;justify-content:center;margin-top:16px;text-align:center}
-.t-person div{text-align:center}
+.t-person{display:flex;gap:12px;align-items:center;margin-top:16px;text-align:left}
+.t-person div{text-align:left}
 .avatar{width:44px;min-width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex-shrink:0;font-size:14px;line-height:1;text-align:center}
 .avatar.blue{background:#0ea5e9}
 .avatar.navy{background:#0a1f44}
 .avatar.sky{background:#38bdf8;color:#0a1f44}
-.t-person strong{display:block;color:var(--navy);font-size:15px;text-align:center}
-.t-person span{display:inline-block;color:var(--muted);font-size:13px;text-align:center}
+.t-person strong{display:block;color:var(--navy);font-size:15px;text-align:left}
+.t-person span{color:var(--muted);font-size:13px;text-align:left}
 /* testimonials */
 .stars{color:var(--amber);letter-spacing:2px}
 .quote{font-size:18px;color:var(--navy);margin:12px 0}
