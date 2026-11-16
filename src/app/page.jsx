@@ -23,6 +23,53 @@ function useReveal() {
   }, []);
 }
 
+const TESTIMONIALS = [
+  [
+    { quote: 'Our best sellers finally look as good as they sell. Setup took ten minutes.', name: 'Sara Ahmed', role: 'Fashion store owner', initials: 'SA', tone: 'blue' },
+    { quote: 'Customers actually swipe through the slider instead of scrolling straight past it.', name: 'Bilal Khan', role: 'Electronics store owner', initials: 'BK', tone: 'navy' },
+    { quote: 'The sliders load fast and look clean on mobile. Sales from our best sellers went up.', name: 'Maria Lopez', role: 'Beauty store owner', initials: 'ML', tone: 'sky' },
+  ],
+  [
+    { quote: 'Unlimited sliders on the $10 plan paid for itself on our first agency client.', name: 'David Chen', role: 'WordPress studio owner', initials: 'DC', tone: 'navy' },
+    { quote: 'We set up sliders for five client stores in one afternoon. No code at all.', name: 'Emma Wilson', role: 'Agency owner', initials: 'EW', tone: 'blue' },
+    { quote: 'Support answered in a few hours and helped us match our theme perfectly.', name: 'Omar Farooq', role: 'Home goods store owner', initials: 'OF', tone: 'sky' },
+  ],
+  [
+    { quote: 'Fast on mobile, clean on desktop, and customers actually swipe through it.', name: 'James Patel', role: 'Grocery store owner', initials: 'JP', tone: 'sky' },
+    { quote: 'I tried three slider plugins. This one was the only one that did not slow my store down.', name: 'Ayesha Malik', role: 'Jewellery store owner', initials: 'AM', tone: 'blue' },
+    { quote: 'New arrivals finally get seen. Our sale slider paid for Pro in the first week.', name: 'Liam Brown', role: 'Sports store owner', initials: 'LB', tone: 'navy' },
+  ],
+];
+
+function TestimonialCard({ t }) {
+  return (
+    <div className="t-card">
+      <div className="stars">★★★★★</div>
+      <p className="quote">“{t.quote}”</p>
+      <div className="t-person">
+        <span className={`avatar ${t.tone}`}>{t.initials}</span>
+        <div><strong>{t.name}</strong><span>{t.role}</span></div>
+      </div>
+    </div>
+  );
+}
+
+function TestimonialCarousel() {
+  return (
+    <div className="t-carousel">
+      {TESTIMONIALS.map((col, ci) => (
+        <div className={`t-col ${ci === 1 ? 'center' : ''}`} key={ci}>
+          <div className={`t-track ${ci === 1 ? 'up' : 'down'}`}>
+            {[...col, ...col].map((t, i) => (
+              <TestimonialCard t={t} key={`${ci}-${i}`} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Accordion({ items }) {
   const [open, setOpen] = useState(0);
   return (
@@ -192,18 +239,15 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="section">
+        <section className="section tint">
           <div className="container reveal">
             <div className="center">
-              <span className="eyebrow">Trusted by store owners</span>
-              <h2>Stores that switched to Modern Product Slider</h2>
-              <p className="lead">Placeholder quotes — replace these with real customer reviews before launch.</p>
+              <span className="eyebrow">Testimonials</span>
+              <h2>What our users say</h2>
+              <p className="lead">See what our customers have to say about us.</p>
             </div>
-            <div className="grid3">
-              <div className="card"><div className="stars">★★★★★</div><p className="quote">“Our best sellers finally look as good as they sell. Setup took ten minutes.”</p><p>— Store owner, WooCommerce fashion store</p></div>
-              <div className="card"><div className="stars">★★★★★</div><p className="quote">“Unlimited sliders on the $10 plan paid for itself on our first agency client.”</p><p>— Agency owner, WordPress studio</p></div>
-              <div className="card"><div className="stars">★★★★★</div><p className="quote">“Fast on mobile, clean on desktop, and customers actually swipe through it.”</p><p>— Store owner, WooCommerce electronics store</p></div>
-            </div>
+            <TestimonialCarousel />
+            <p className="t-note">Placeholder quotes — replace these with real customer reviews before launch.</p>
           </div>
         </section>
 

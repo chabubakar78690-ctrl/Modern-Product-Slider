@@ -29,7 +29,7 @@ h3{font-size:20px;margin:0 0 8px;color:var(--navy)}
 /* entrance animation */
 .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease}
 .reveal.in{opacity:1;transform:none}
-@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none} html{scroll-behavior:auto}}
+@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none} html{scroll-behavior:auto} .t-track{animation:none}}
 /* nav — centred menu, big logo */
 .nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);box-shadow:0 4px 24px rgba(8,26,61,.05)}
 .nav-inner{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;min-height:100px}
@@ -157,6 +157,26 @@ h3{font-size:20px;margin:0 0 8px;color:var(--navy)}
 .step{border:1px solid var(--line);border-radius:20px;padding:28px;background:#fff;transition:transform .25s ease,box-shadow .25s ease}
 .step:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg);border-color:var(--sky)}
 .step-num{display:inline-flex;width:44px;height:44px;border-radius:50%;background:var(--grad);color:#fff;align-items:center;justify-content:center;font-weight:800;font-size:18px;margin-bottom:16px}
+/* testimonials — vertical carousel: left down, centre up, right down */
+@keyframes tUp{from{transform:translateY(0)}to{transform:translateY(-50%)}}
+@keyframes tDown{from{transform:translateY(-50%)}to{transform:translateY(0)}}
+.t-carousel{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:44px;height:560px;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(180deg,transparent,#000 12%,#000 88%,transparent)}
+.t-col{overflow:hidden;position:relative}
+.t-col.center{transform:translateY(-48px);height:calc(100% + 48px)}
+.t-track{display:grid;gap:24px;animation:36s linear infinite;will-change:transform}
+.t-track.up{animation-name:tUp}
+.t-track.down{animation-name:tDown}
+.t-carousel:hover .t-track{animation-play-state:paused}
+.t-card{border:1px solid var(--line);border-radius:20px;padding:24px;background:#fff;box-shadow:0 10px 30px rgba(8,26,61,.06);transition:transform .25s ease,box-shadow .25s ease}
+.t-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.t-person{display:flex;gap:12px;align-items:center;margin-top:16px}
+.avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex-shrink:0;font-size:14px}
+.avatar.blue{background:#0ea5e9}
+.avatar.navy{background:#0a1f44}
+.avatar.sky{background:#38bdf8;color:#0a1f44}
+.t-person strong{display:block;color:var(--navy);font-size:15px}
+.t-person span{display:block;color:var(--muted);font-size:13px}
+.t-note{text-align:center;color:var(--muted);font-size:13px;margin-top:24px}
 /* testimonials */
 .stars{color:var(--amber);letter-spacing:2px}
 .quote{font-size:18px;color:var(--navy);margin:12px 0}
@@ -206,4 +226,9 @@ footer .brand img{height:48px}
   .compare-cta{flex-direction:column;align-items:flex-start}
   .hero{padding:64px 0 72px}
   .section{padding:64px 0}
+  .t-carousel{grid-template-columns:1fr;height:auto;overflow:visible;-webkit-mask-image:none;mask-image:none}
+  .t-col{overflow:visible}
+  .t-col.center{transform:none;height:auto}
+  .t-track{animation:none}
+  .t-track>:nth-child(n+4){display:none}
 }
