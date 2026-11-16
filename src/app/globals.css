@@ -133,8 +133,12 @@ h3{font-size:20px;margin:0 0 8px;color:var(--navy)}
 .acc-item{border-bottom:1px solid var(--line);transition:background .2s}
 .acc-item:hover{background:#f8fbff}
 .acc-btn{width:100%;background:none;border:0;padding:20px 4px;display:flex;justify-content:space-between;gap:16px;font-size:17px;font-weight:700;color:var(--navy);cursor:pointer;text-align:left}
-.acc-btn span{font-size:22px;color:var(--blue)}
-.acc-body{padding:0 4px 20px;color:var(--muted);max-width:720px}
+.acc-btn span{font-size:22px;color:var(--blue);transition:transform .35s ease;flex-shrink:0}
+.acc-item.open .acc-btn span{transform:rotate(180deg)}
+.acc-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .4s ease;overflow:hidden}
+.acc-item.open .acc-body{grid-template-rows:1fr}
+.acc-body-inner{overflow:hidden;min-height:0;color:var(--muted);max-width:720px;padding:0 4px;transition:padding .4s ease}
+.acc-item.open .acc-body-inner{padding-bottom:20px}
 /* compare table — coloured, modern */
 .compare-wrap{margin-top:44px;background:#fff;border:1px solid var(--line);border-radius:24px;overflow:hidden;box-shadow:var(--shadow-lg)}
 .compare{width:100%;border-collapse:collapse;background:#fff}
@@ -160,23 +164,23 @@ h3{font-size:20px;margin:0 0 8px;color:var(--navy)}
 /* testimonials — vertical carousel: left down, centre up, right down */
 @keyframes tUp{from{transform:translateY(0)}to{transform:translateY(-50%)}}
 @keyframes tDown{from{transform:translateY(-50%)}to{transform:translateY(0)}}
-.t-carousel{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:44px;height:560px;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(180deg,transparent,#000 12%,#000 88%,transparent)}
-.t-col{overflow:hidden;position:relative;margin-top:24px}
+.t-carousel{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:28px -12px 0;padding:20px 12px;height:620px;overflow:visible;background:#fff}
+.t-col{overflow:hidden;position:relative;margin-top:24px;padding:0 12px;background:#fff;border-radius:20px}
 .t-col.middle{transform:translateY(-64px);height:calc(100% + 64px);margin-top:0}
-.t-track{display:grid;gap:24px;animation:36s linear infinite;will-change:transform}
+.t-track{display:grid;gap:24px;animation:36s linear infinite;will-change:transform;padding:16px 2px}
 .t-track.up{animation-name:tUp}
 .t-track.down{animation-name:tDown}
 .t-carousel:hover .t-track{animation-play-state:paused}
 .t-card{border:1px solid var(--line);border-radius:20px;padding:24px;background:#fff;box-shadow:0 10px 30px rgba(8,26,61,.06);transition:transform .25s ease,box-shadow .25s ease;text-align:left}
 .t-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
-.t-person{display:flex;gap:12px;align-items:center;margin-top:16px}
+.t-person{display:flex;gap:12px;align-items:center;margin-top:16px;text-align:left}
+.t-person div{text-align:left}
 .avatar{width:44px;min-width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex-shrink:0;font-size:14px;line-height:1;text-align:center}
 .avatar.blue{background:#0ea5e9}
 .avatar.navy{background:#0a1f44}
 .avatar.sky{background:#38bdf8;color:#0a1f44}
 .t-person strong{display:block;color:var(--navy);font-size:15px}
 .t-person span{display:block;color:var(--muted);font-size:13px}
-.t-note{text-align:center;color:var(--muted);font-size:13px;margin-top:24px}
 /* testimonials */
 .stars{color:var(--amber);letter-spacing:2px}
 .quote{font-size:18px;color:var(--navy);margin:12px 0}
@@ -226,8 +230,8 @@ footer .brand img{height:48px}
   .compare-cta{flex-direction:column;align-items:flex-start}
   .hero{padding:64px 0 72px}
   .section{padding:64px 0}
-  .t-carousel{grid-template-columns:1fr;height:auto;overflow:visible;-webkit-mask-image:none;mask-image:none}
-  .t-col{overflow:visible;margin-top:0}
+  .t-carousel{grid-template-columns:1fr;height:auto;overflow:visible;margin:28px 0 0;padding:0}
+  .t-col{overflow:visible;margin-top:0;padding:0}
   .t-col.middle{transform:none;height:auto}
   .t-track{animation:none}
   .t-track>:nth-child(n+4){display:none}

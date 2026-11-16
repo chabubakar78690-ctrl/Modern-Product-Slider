@@ -75,11 +75,11 @@ function Accordion({ items }) {
   return (
     <div className="acc">
       {items.map((item, i) => (
-        <div className="acc-item" key={item.q}>
-          <button className="acc-btn" onClick={() => setOpen(open === i ? -1 : i)}>
+        <div className={`acc-item ${open === i ? 'open' : ''}`} key={item.q}>
+          <button className="acc-btn" onClick={() => setOpen(open === i ? -1 : i)} aria-expanded={open === i}>
             {item.q}<span>{open === i ? '−' : '+'}</span>
           </button>
-          {open === i && <div className="acc-body">{item.a}</div>}
+          <div className="acc-body"><div className="acc-body-inner">{item.a}</div></div>
         </div>
       ))}
     </div>
@@ -239,7 +239,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="section tint">
+        <section className="section">
           <div className="container reveal">
             <div className="center">
               <span className="eyebrow">Testimonials</span>
@@ -247,7 +247,6 @@ export default function Home() {
               <p className="lead">See what our customers have to say about us.</p>
             </div>
             <TestimonialCarousel />
-            <p className="t-note">Placeholder quotes — replace these with real customer reviews before launch.</p>
           </div>
         </section>
 
