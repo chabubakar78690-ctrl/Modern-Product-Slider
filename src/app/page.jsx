@@ -56,7 +56,6 @@ export default function Home() {
           <nav className={menuOpen ? 'nav-links open' : 'nav-links'}>
             <a href="#features" onClick={() => setMenuOpen(false)}>Features</a>
             <a href="#pricing" onClick={() => setMenuOpen(false)}>Pricing</a>
-            <a href="#compare" onClick={() => setMenuOpen(false)}>Free vs Pro</a>
             <a href="#how" onClick={() => setMenuOpen(false)}>How it works</a>
             <a href="#faq" onClick={() => setMenuOpen(false)}>FAQ</a>
           </nav>
@@ -68,24 +67,6 @@ export default function Home() {
       </header>
 
       <main id="top">
-        <section className="hero">
-          <div className="container hero-center reveal in">
-            <span className="pill">For WooCommerce stores · Free on WordPress.org</span>
-            <h1>Beautiful product sliders<br />that sell more.</h1>
-            <p className="lead">Modern Product Slider turns your WooCommerce products into fast, responsive, great-looking sliders — in minutes, with no code. Start free, go Pro when you need unlimited sliders.</p>
-            <div className="hero-ctas">
-              <a className="btn blue" href="#pricing">Download Free</a>
-              <a className="btn light" href="#pricing">Get Pro — $3/mo</a>
-            </div>
-            <p className="hero-note"><b>No credit card to start</b> · Works with any theme · Cancel anytime</p>
-            <ul className="hero-points">
-              <li>Unlimited products per rack on Pro</li>
-              <li>Responsive on mobile, tablet and desktop</li>
-              <li>Shortcode, Gutenberg block and Elementor widget</li>
-            </ul>
-          </div>
-        </section>
-
         <section className="section" id="pricing">
           <div className="container center reveal">
             <span className="eyebrow">Select your plan</span>
@@ -197,35 +178,6 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="section compare-section" id="compare">
-          <div className="container reveal">
-            <div className="center">
-              <span className="eyebrow">Free vs Pro</span>
-              <h2>What do you get with Pro?</h2>
-              <p className="lead">Free is great for trying it out. Pro removes the limits — and pays for itself.</p>
-            </div>
-            <div className="compare-wrap">
-              <table className="compare">
-                <thead>
-                  <tr>
-                    <th>Feature</th>
-                    <th><span className="plan-label">Free</span><span className="plan-sub">$0 forever</span></th>
-                    <th className="pro-col"><span className="plan-label">Pro ★</span><span className="plan-sub">$3 or $10 / mo</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td>Product sliders</td><td><span className="limit">Limited</span></td><td className="pro-col"><span className="yes">✓ Unlimited</span></td></tr>
-                  <tr><td>Products per rack</td><td><span className="limit">Limited</span></td><td className="pro-col"><span className="yes">✓ Unlimited</span></td></tr>
-                  <tr><td>Pro Add-On ZIP download</td><td><span className="no">—</span></td><td className="pro-col"><span className="yes">✓ Instant</span></td></tr>
-                  <tr><td>Sites covered</td><td>1 site</td><td className="pro-col"><span className="yes">✓ 1, or Unlimited on $10</span></td></tr>
-                  <tr><td>Support</td><td>Community</td><td className="pro-col"><span className="yes">✓ Priority developer support</span></td></tr>
-                </tbody>
-              </table>
-            </div>
-            <div className="center compare-btn"><a className="btn blue" href="#pricing">Get Pro — $3/mo</a></div>
-          </div>
-        </section>
-
         <section className="section tint" id="how">
           <div className="container reveal">
             <div className="center">
@@ -285,7 +237,7 @@ export default function Home() {
               <a className="brand" href="#top"><img src="/logo.svg" alt="Modern Product Slider logo" /></a>
               <p>Beautiful, fast WooCommerce product sliders. Free on WordPress.org, Pro from $3/month.</p>
             </div>
-            <div><h4>Product</h4><a href="#features">Features</a><a href="#pricing">Pricing</a><a href="#compare">Free vs Pro</a><a href="#how">How it works</a></div>
+            <div><h4>Product</h4><a href="#features">Features</a><a href="#pricing">Pricing</a><a href="#how">How it works</a></div>
             <div><h4>Resources</h4><a href="#faq">FAQ</a><a href="#pricing">Download Free</a><a href="#pricing">Get Pro</a></div>
             <div><h4>Company</h4><a href="#top">About</a><a href="#faq">Support</a><a href="#pricing">Log in</a></div>
           </div>
