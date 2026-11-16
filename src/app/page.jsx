@@ -56,16 +56,83 @@ function TestimonialCard({ t }) {
 
 function TestimonialCarousel() {
   return (
-    <div className="t-carousel">
-      {TESTIMONIALS.map((col, ci) => (
-        <div className={`t-col ${ci === 1 ? 'middle' : ''}`} key={ci}>
-          <div className={`t-track ${ci === 1 ? 'up' : 'down'}`}>
-            {[...col, ...col].map((t, i) => (
-              <TestimonialCard t={t} key={`${ci}-${i}`} />
-            ))}
+    <>
+      <div className="t-carousel">
+        {TESTIMONIALS.map((col, ci) => (
+          <div className={`t-col ${ci === 1 ? 'middle' : ''}`} key={ci}>
+            <div className={`t-track ${ci === 1 ? 'up' : 'down'}`}>
+              {[...col, ...col].map((t, i) => (
+                <TestimonialCard t={t} key={`${ci}-${i}`} />
+              ))}
+            </div>
           </div>
+        ))}
+      </div>
+      <p className="t-swipe-hint">Swipe to see more reviews →</p>
+    </>
+  );
+}
+
+const SOCIALS = [
+  { id: 'google', label: 'Continue with Google', icon: (
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.9-.1-1.5-.3-2.2H12v4.3h6.5c-.1 1.1-.8 2.7-2.4 3.8l3.7 2.9c2.3-2.1 3.7-5.2 3.7-8.8z"/><path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.7-2.9c-1 .7-2.3 1.1-4.2 1.1-3.2 0-5.9-2.1-6.8-5.1L1.3 17.1C3.3 21.2 7.3 24 12 24z"/><path fill="#FBBC05" d="M5.2 14.2c-.2-.7-.4-1.4-.4-2.2s.1-1.5.4-2.2L1.3 6.9C.5 8.5 0 10.2 0 12s.5 3.5 1.3 5.1l3.9-2.9z"/><path fill="#EA4335" d="M12 4.7c1.8 0 3 .8 3.7 1.4l3.3-3.2C17.9 1.1 15.2 0 12 0 7.3 0 3.3 2.8 1.3 6.9l3.9 2.9c.9-3 3.6-5.1 6.8-5.1z"/></svg>
+  ) },
+  { id: 'passkey', label: 'Continue with passkey', icon: (
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#0f172a" d="M14.5 3a6 6 0 0 0-5.9 7.2L3 15.8V21h5.2l1-1v-2h2v-2h2l1.2-1.2A6 6 0 1 0 14.5 3zm1.5 5.5a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
+  ) },
+  { id: 'facebook', label: 'Continue with Facebook', icon: (
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#1877F2" d="M24 12a12 12 0 1 0-13.9 11.9v-8.4h-3v-3.5h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 1-2 1.9V12h3.3l-.5 3.5h-2.8v8.4A12 12 0 0 0 24 12z"/></svg>
+  ) },
+  { id: 'apple', label: 'Continue with Apple', icon: (
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#000" d="M16.7 12.9c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.9-1.6 0-3.1 1-4 2.4-1.7 2.9-.4 7.3 1.2 9.7.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8s1.9.8 3.2.8c1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8-.1 0-2.6-1-2.7-3.7zM14.6 5.7c.7-.8 1.1-1.9 1-3-1 0-2.1.6-2.8 1.4-.6.7-1.2 1.9-1 3 1.1.1 2.2-.6 2.8-1.4z"/></svg>
+  ) },
+];
+
+function AuthModal({ mode, onClose, onSwitch }) {
+  const [showAll, setShowAll] = useState(true);
+  const [attempted, setAttempted] = useState(false);
+  const isLogin = mode === 'login';
+  const visibleSocials = showAll ? SOCIALS : SOCIALS.slice(0, 1);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
+  }, [onClose]);
+
+  return (
+    <div className="auth-overlay" onClick={onClose}>
+      <div className="auth-modal" role="dialog" aria-modal="true" aria-label={isLogin ? 'Log in' : 'Sign up'} onClick={(e) => e.stopPropagation()}>
+        <button className="auth-close" onClick={onClose} aria-label="Close">✕</button>
+        <div className="auth-logo"><img src="/logo.svg" alt="Modern Product Slider" /></div>
+        <h3>{isLogin ? 'Welcome back' : 'Create your account'}</h3>
+        <p className="auth-sub">{isLogin ? 'Log in to manage your Pro licence and downloads.' : 'Sign up to get Pro, manage your licence and download the add-on.'}</p>
+        <div className="auth-tabs">
+          <button className={isLogin ? 'active' : ''} onClick={() => { onSwitch('login'); setAttempted(false); }}>Log in</button>
+          <button className={!isLogin ? 'active' : ''} onClick={() => { onSwitch('signup'); setAttempted(false); }}>Sign up</button>
         </div>
-      ))}
+        <div className="auth-social">
+          {visibleSocials.map((s) => (
+            <button key={s.id} type="button" onClick={() => setAttempted(true)}>{s.icon}{s.label}</button>
+          ))}
+        </div>
+        <button className="auth-more" type="button" onClick={() => setShowAll(!showAll)}>{showAll ? 'Less options' : 'More options'}</button>
+        <div className="auth-or">OR</div>
+        <form onSubmit={(e) => { e.preventDefault(); setAttempted(true); }}>
+          {!isLogin && (
+            <div className="auth-field"><label htmlFor="auth-name">Full name</label><input id="auth-name" type="text" placeholder="Your name" autoComplete="name" /></div>
+          )}
+          <div className="auth-field"><label htmlFor="auth-email">Email</label><input id="auth-email" type="email" placeholder="Email" autoComplete="email" required /></div>
+          <div className="auth-field"><label htmlFor="auth-password">Password</label><input id="auth-password" type="password" placeholder="Password" autoComplete={isLogin ? 'current-password' : 'new-password'} required minLength={6} /></div>
+          <button className="auth-submit" type="submit">Continue</button>
+        </form>
+        <button className="auth-sso" type="button" onClick={() => setAttempted(true)}>Continue with SSO</button>
+        {attempted && (
+          <p className="auth-note">Account sign-in is not connected yet — this is the front-end of the popup. Connecting Google, Apple, Facebook and email sign-in is the next step.</p>
+        )}
+        <p className="auth-terms">By continuing, you agree to our Terms of Service and Privacy Policy.</p>
+      </div>
     </div>
   );
 }
@@ -88,10 +155,12 @@ function Accordion({ items }) {
 
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [authMode, setAuthMode] = useState(null);
   useReveal();
 
   return (
     <>
+      {authMode && <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onSwitch={setAuthMode} />}
       <header className="nav">
         <div className="container nav-inner">
           <a className="brand" href="#top" aria-label="Modern Product Slider — home">
@@ -107,8 +176,8 @@ export default function Home() {
             <a href="#faq" onClick={() => setMenuOpen(false)}>FAQ</a>
           </nav>
           <div className="nav-actions">
-            <a className="btn ghost small" href="#pricing">Log in</a>
-            <a className="btn blue small" href="#pricing">Get Pro</a>
+            <button className="btn ghost small" type="button" onClick={() => setAuthMode('login')}>Log in</button>
+            <button className="btn blue small" type="button" onClick={() => setAuthMode('signup')}>Get Pro</button>
           </div>
         </div>
       </header>
@@ -282,7 +351,7 @@ export default function Home() {
             </div>
             <div><h4>Product</h4><a href="#features">Features</a><a href="#pricing">Pricing</a><a href="#how">How it works</a></div>
             <div><h4>Resources</h4><a href="#faq">FAQ</a><a href="#pricing">Download Free</a><a href="#pricing">Get Pro</a></div>
-            <div><h4>Company</h4><a href="#top">About</a><a href="#faq">Support</a><a href="#pricing">Log in</a></div>
+            <div><h4>Company</h4><a href="#top">About</a><a href="#faq">Support</a><a href="#top" onClick={(e) => { e.preventDefault(); setAuthMode('login'); }}>Log in</a></div>
           </div>
           <p className="copy">© 2026 Modern Product Slider. All rights reserved.</p>
         </div>
