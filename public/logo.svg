@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1625" height="388" viewBox="0 0 1625 388">
+  <rect x="8" y="44" width="300" height="300" rx="56" fill="#fff" stroke="#0a1f44" stroke-width="10"/>
+  <rect x="88" y="124" width="140" height="180" rx="12" fill="#0ea5e9"/>
+  <path d="M128 150a40 40 0 0 1 80 0" fill="none" stroke="#0a1f44" stroke-width="12" stroke-linecap="round"/>
+  <text x="380" y="170" font-family="Arial, Helvetica, sans-serif" font-size="110" font-weight="800" fill="#0a1f44">Modern</text>
+  <text x="380" y="300" font-family="Arial, Helvetica, sans-serif" font-size="110" font-weight="800" fill="#0ea5e9">Product <tspan fill="#0a1f44">Slider</tspan></text>
+</svg>
