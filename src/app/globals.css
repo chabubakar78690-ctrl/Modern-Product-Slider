@@ -165,7 +165,7 @@ h3{font-size:20px;margin:0 0 8px;color:var(--navy)}
 @keyframes tUp{from{transform:translateY(0)}to{transform:translateY(-50%)}}
 @keyframes tDown{from{transform:translateY(-50%)}to{transform:translateY(0)}}
 .t-carousel{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:28px -24px 0;padding:20px 24px;height:620px;overflow:hidden;background:#fff;-webkit-mask-image:linear-gradient(180deg,transparent,#000 20%,#000 80%,transparent);mask-image:linear-gradient(180deg,transparent,#000 20%,#000 80%,transparent)}
-.t-col{overflow:hidden;position:relative;margin-top:0;padding:56px 12px 0;background:#fff;border-radius:20px}
+.t-col{overflow:visible;position:relative;margin-top:0;padding:56px 12px 0;background:#fff;border-radius:20px}
 .t-col.middle{transform:none;height:100%;margin-top:0;padding-top:0}
 .t-track{display:grid;gap:24px;animation:36s linear infinite;will-change:transform;padding:16px 2px}
 .t-track.up{animation-name:tUp}
@@ -173,14 +173,14 @@ h3{font-size:20px;margin:0 0 8px;color:var(--navy)}
 .t-carousel:hover .t-track{animation-play-state:paused}
 .t-card{border:1px solid var(--line);border-radius:20px;padding:24px;background:#fff;box-shadow:0 10px 30px rgba(8,26,61,.06);transition:transform .25s ease,box-shadow .25s ease;text-align:left}
 .t-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
-.t-person{display:flex;gap:12px;align-items:center;margin-top:16px;text-align:left}
-.t-person div{text-align:left}
+.t-person{display:flex;gap:12px;align-items:center;justify-content:center;margin-top:16px;text-align:center}
+.t-person div{text-align:center}
 .avatar{width:44px;min-width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex-shrink:0;font-size:14px;line-height:1;text-align:center}
 .avatar.blue{background:#0ea5e9}
 .avatar.navy{background:#0a1f44}
 .avatar.sky{background:#38bdf8;color:#0a1f44}
-.t-person strong{display:block;color:var(--navy);font-size:15px}
-.t-person span{display:block;color:var(--muted);font-size:13px}
+.t-person strong{display:block;color:var(--navy);font-size:15px;text-align:center}
+.t-person span{display:inline-block;color:var(--muted);font-size:13px;text-align:center}
 /* testimonials */
 .stars{color:var(--amber);letter-spacing:2px}
 .quote{font-size:18px;color:var(--navy);margin:12px 0}
