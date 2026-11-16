@@ -2,12 +2,6 @@
 
 import { useEffect, useState } from 'react';
 
-const PREVIEW_PRODUCTS = [
-  { name: 'Wireless Headphones', cat: 'Audio', price: '$89.00', old: '$129.00', img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80' },
-  { name: 'Classic Watch', cat: 'Accessories', price: '$149.00', old: '$199.00', img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80' },
-  { name: 'Running Sneakers', cat: 'Footwear', price: '$119.00', old: '$159.00', img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80' },
-];
-
 const FAQS = [
   { q: 'What is the difference between Free and Pro?', a: 'Free gives you beautiful product sliders for your WooCommerce store with a limited number of sliders. Pro unlocks unlimited sliders, unlimited products per rack, instant Pro Add-On ZIP download, and priority developer support.' },
   { q: 'How do I install the free version?', a: 'From your WordPress dashboard go to Plugins → Add New, search for “Modern Product Slider”, install and activate it. Then create your first slider from the Modern Product Slider menu — no code needed.' },
@@ -89,20 +83,6 @@ export default function Home() {
               <li>Responsive on mobile, tablet and desktop</li>
               <li>Shortcode, Gutenberg block and Elementor widget</li>
             </ul>
-
-            <div className="preview reveal">
-              <div className="preview-bar"><span /><span /><span /><strong>Your store — Best Sellers</strong></div>
-              <div className="preview-grid">
-                {PREVIEW_PRODUCTS.map((p) => (
-                  <div className="preview-card" key={p.name}>
-                    <img src={p.img} alt={p.name} />
-                    <h4>{p.name}</h4>
-                    <p>{p.cat}</p>
-                    <p className="price">{p.price}<s>{p.old}</s></p>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </section>
 
@@ -175,7 +155,7 @@ export default function Home() {
                   <div><strong>Simplify your spend.</strong><p>One simple monthly plan, cancel anytime.</p></div>
                 </div>
               </div>
-              <div className="hero-ctas"><a className="btn sky" href="#pricing">See Pro plans</a></div>
+              <div className="cta-left"><a className="btn sky" href="#pricing">See Pro plans</a></div>
             </div>
             <div className="pro-media">
               <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1000&q=80" alt="A bright WooCommerce storefront" />
@@ -241,11 +221,8 @@ export default function Home() {
                   <tr><td>Support</td><td>Community</td><td className="pro-col"><span className="yes">✓ Priority developer support</span></td></tr>
                 </tbody>
               </table>
-              <div className="compare-cta">
-                <p><strong>Ready for unlimited?</strong> Start on Free, upgrade in one click when you need more.</p>
-                <a className="btn blue" href="#pricing">Compare plans →</a>
-              </div>
             </div>
+            <div className="center compare-btn"><a className="btn blue" href="#pricing">Get Pro — $3/mo</a></div>
           </div>
         </section>
 
