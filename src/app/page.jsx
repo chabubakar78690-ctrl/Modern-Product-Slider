@@ -89,10 +89,10 @@ const SOCIALS = [
 ];
 
 function AuthModal({ mode, onClose, onSwitch }) {
-  const [showAll, setShowAll] = useState(true);
+  const [showAll, setShowAll] = useState(false);
   const [attempted, setAttempted] = useState(false);
   const isLogin = mode === 'login';
-  const visibleSocials = showAll ? SOCIALS : SOCIALS.slice(0, 1);
+  const visibleSocials = showAll ? SOCIALS : SOCIALS.slice(0, 2);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -105,6 +105,7 @@ function AuthModal({ mode, onClose, onSwitch }) {
     <div className="auth-overlay" onClick={onClose}>
       <div className="auth-modal" role="dialog" aria-modal="true" aria-label={isLogin ? 'Log in' : 'Sign up'} onClick={(e) => e.stopPropagation()}>
         <button className="auth-close" onClick={onClose} aria-label="Close">✕</button>
+        <div className="auth-body">
         <div className="auth-logo"><img src="/logo.svg" alt="Modern Product Slider" /></div>
         <h3>{isLogin ? 'Welcome back' : 'Create your account'}</h3>
         <p className="auth-sub">{isLogin ? 'Log in to manage your Pro licence and downloads.' : 'Sign up to get Pro, manage your licence and download the add-on.'}</p>
@@ -114,7 +115,7 @@ function AuthModal({ mode, onClose, onSwitch }) {
         </div>
         <div className="auth-social">
           {visibleSocials.map((s) => (
-            <button key={s.id} type="button" onClick={() => setAttempted(true)}>{s.icon}{s.label}</button>
+            <button key={s.id} type="button" onClick={() => setAttempted(true)}><span className="auth-ico">{s.icon}</span>{s.label}</button>
           ))}
         </div>
         <button className="auth-more" type="button" onClick={() => setShowAll(!showAll)}>{showAll ? 'Less options' : 'More options'}</button>
@@ -123,8 +124,10 @@ function AuthModal({ mode, onClose, onSwitch }) {
           {!isLogin && (
             <div className="auth-field"><label htmlFor="auth-name">Full name</label><input id="auth-name" type="text" placeholder="Your name" autoComplete="name" /></div>
           )}
-          <div className="auth-field"><label htmlFor="auth-email">Email</label><input id="auth-email" type="email" placeholder="Email" autoComplete="email" required /></div>
-          <div className="auth-field"><label htmlFor="auth-password">Password</label><input id="auth-password" type="password" placeholder="Password" autoComplete={isLogin ? 'current-password' : 'new-password'} required minLength={6} /></div>
+          <div className="auth-row">
+            <div className="auth-field"><label htmlFor="auth-email">Email</label><input id="auth-email" type="email" placeholder="Email" autoComplete="email" required /></div>
+            <div className="auth-field"><label htmlFor="auth-password">Password</label><input id="auth-password" type="password" placeholder="Password" autoComplete={isLogin ? 'current-password' : 'new-password'} required minLength={6} /></div>
+          </div>
           <button className="auth-submit" type="submit">Continue</button>
         </form>
         <button className="auth-sso" type="button" onClick={() => setAttempted(true)}>Continue with SSO</button>
@@ -132,6 +135,7 @@ function AuthModal({ mode, onClose, onSwitch }) {
           <p className="auth-note">Account sign-in is not connected yet — this is the front-end of the popup. Connecting Google, Apple, Facebook and email sign-in is the next step.</p>
         )}
         <p className="auth-terms">By continuing, you agree to our Terms of Service and Privacy Policy.</p>
+        </div>
       </div>
     </div>
   );
