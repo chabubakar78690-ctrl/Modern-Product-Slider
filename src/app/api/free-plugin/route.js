@@ -24,11 +24,13 @@ function freeVersion() {
 export async function GET() {
   const version = freeVersion();
   let size = '—';
-  let date = new Date().toISOString().slice(0, 10);
+  // The ZIP is rebuilt from wordpress-plugin/ on every deploy, so its
+  // release date is the deploy date (today). The file mtime on the
+  // serverless host is not reliable, so it is not used here.
+  const date = new Date().toISOString().slice(0, 10);
   try {
     const stat = fs.statSync(path.join(process.cwd(), 'public', 'modern-product-slider-free.zip'));
     size = (stat.size / 1024).toFixed(0) + ' KB';
-    date = stat.mtime.toISOString().slice(0, 10);
   } catch {}
   return json({
     latest_version: version,
