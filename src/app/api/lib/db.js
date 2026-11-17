@@ -83,6 +83,8 @@ const FILE = path.join(process.cwd(), 'data', 'db.json');
 let memory = null;
 
 function loadFileTables() {
+  // Local dev only. Never throws: on Vercel the filesystem is read-only
+  // outside /tmp, so any file error falls back to in-memory seed data.
   try {
     if (fs.existsSync(FILE)) return JSON.parse(fs.readFileSync(FILE, 'utf8'));
   } catch {}
@@ -91,21 +93,29 @@ function loadFileTables() {
   return tables;
 }
 
+// Vercel sets these at build time, but not reliably at function runtime,
+// so also check the Lambda markers — and never trust the file adapter
+// when a write fails.
+const IS_SERVERLESS = !!(
+  process.env.VERCEL || process.env.VERCEL_ENV ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT
+);
+
 function localTables() {
-  if (process.env.VERCEL) {
+  if (IS_SERVERLESS) {
     if (!memory) memory = seedTables();
     return memory;
   }
-  return loadFileTables();
+  try { return loadFileTables(); } catch { if (!memory) memory = seedTables(); return memory; }
 }
 
 function saveLocalTables(tables) {
-  if (process.env.VERCEL) { memory = tables; return; }
-  try { fs.mkdirSync(path.dirname(FILE), { recursive: true }); fs.writeFileSync(FILE, JSON.stringify(tables, null, 2)); } catch {}
+  if (IS_SERVERLESS) { memory = tables; return; }
+  try { fs.mkdirSync(path.dirname(FILE), { recursive: true }); fs.writeFileSync(FILE, JSON.stringify(tables, null, 2)); } catch { memory = tables; }
 }
 
 const localAdapter = {
-  mode: process.env.VERCEL ? 'memory (demo)' : 'file',
+  mode: IS_SERVERLESS ? 'memory (demo)' : 'file',
   async all(table) { return clone(localTables()[table] || []); },
   async find(table, field, value) { return clone((localTables()[table] || []).find((r) => String(r[field]) === String(value)) || null); },
   async insert(table, row) {
