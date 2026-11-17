@@ -51,7 +51,7 @@ async function sbFetch(path, method = 'GET', body) {
 
 const supabaseAdapter = {
   mode: 'supabase',
-  async all(table) { return sbFetch(table + '?select=*&order=created_at.desc'); },
+  async all(table) { return sbFetch(table + '?select=*'); },
   async find(table, field, value) {
     const rows = await sbFetch(`${table}?select=*&${encodeURIComponent(field)}=eq.${encodeURIComponent(value)}`);
     return rows[0] || null;
