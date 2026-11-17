@@ -36,6 +36,8 @@ export const SEED = {
     { version: '2.0.0', date: '2026-10-28', file: 'modern-product-slider-pro-2.0.0.zip', size: '1.7 MB', current: false, notes: 'Pro add-on launch: unlimited sliders, licence activation.' },
     { version: '1.4.2', date: '2026-10-10', file: 'modern-product-slider-1.4.2.zip', size: '1.2 MB', current: false, notes: 'Free version bug fixes and accessibility improvements.' },
   ],
+  // Free plugin (built from wordpress-plugin/ on every deploy).
+  freeVersion: { version: '1.0.0', file: 'modern-product-slider-free.zip', size: '—', date: '2026-11-18', notes: 'Free version: WooCommerce product sliders via shortcode and Gutenberg block, with license connect and update checker.' },
   settings: {
     oauth: {
       google: { enabled: true, clientId: '', clientSecret: '', redirect: 'https://modern-product-slider.vercel.app/api/auth/google/callback' },

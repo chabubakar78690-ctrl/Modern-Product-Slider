@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDashboard, useRole, money } from '../lib/useStore';
 import { PAYFAST } from '../lib/store';
 import Loader, { BtnSpinner } from '../lib/Loader';
 
 export default function BillingPage() {
-  const { data, update, serverLoading, session } = useDashboard();
+  const { data, update, serverLoading, session, refreshServer } = useDashboard();
   const role = useRole();
   const isAdmin = role === 'admin';
   const [selected, setSelected] = useState('unlimited');
@@ -16,6 +16,20 @@ export default function BillingPage() {
   const pf = data.settings.payfast;
   const plan = data.plans.find((p) => p.id === selected) || data.plans[2];
   const endpoint = pf.sandbox ? PAYFAST.sandboxUrl : PAYFAST.liveUrl;
+
+  // PayFast returns here after checkout (?payfast=success / cancelled).
+  // The return alone is never proof of payment — the ITN webhook is — so
+  // on success we refresh from the server and say what actually happened.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('payfast') === 'success') {
+      setDone('Payment submitted to PayFast. Your license is created automatically once PayFast confirms the payment (usually within a minute) — refresh this page to see it.');
+      refreshServer();
+    } else if (q.get('payfast') === 'cancelled') {
+      setDone('Checkout was cancelled — nothing was charged. Pick a plan below to try again.');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const pay = () => {
     const id = 'PF-' + Math.floor(88000 + Math.random() * 999);
@@ -64,19 +78,21 @@ export default function BillingPage() {
   return (
     <>
       {done && <p className="dash-note green">{done}</p>}
-      <p className="dash-note blue">
-        Payments run through <b>PayFast</b> ({pf.sandbox ? 'Sandbox — test mode' : 'Live'}). Checkout posts a signed HTML form to <code>{endpoint}</code>.
-        The MD5 signature is generated on the server from the order fields plus your passphrase — it is never built in the browser.
-        PayFast then confirms the payment server-to-server with an <b>ITN</b> to your notify URL; the ITN (with its 4 security checks) is the only proof of payment.
-        Docs: <a href={PAYFAST.docs} target="_blank" rel="noreferrer" style={{ color: '#0284c7' }}>developers.payfast.co.za</a>
-        {!isAdmin && <><br />Note: PayFast is a South African gateway — a live merchant account needs South African business/bank details. Sandbox testing works from anywhere.</>}
-      </p>
+      {isAdmin && (
+        <p className="dash-note blue">
+          Payments run through <b>PayFast</b> ({pf.sandbox ? 'Sandbox — test mode' : 'Live'}). Checkout posts a signed HTML form to <code>{endpoint}</code>.
+          The MD5 signature is generated on the server from the order fields plus your passphrase — it is never built in the browser.
+          PayFast then confirms the payment server-to-server with an <b>ITN</b> to your notify URL; the ITN (with its 4 security checks) is the only proof of payment.
+          Docs: <a href={PAYFAST.docs} target="_blank" rel="noreferrer" style={{ color: '#0284c7' }}>developers.payfast.co.za</a>
+          <br />Note: PayFast is a South African gateway — a live merchant account needs South African business/bank details. Sandbox testing works from anywhere.
+        </p>
+      )}
 
       {!isAdmin && (
         <>
           <div className="dash-grid three">
             <div className="dash-card stat"><div className="s-label">Current plan</div><div className="s-num" style={{ fontSize: 22 }}>{data.customer.planName}</div><div className="s-sub">{data.customer.status} · renews {data.customer.renews}</div></div>
-            <div className="dash-card stat"><div className="s-label">Monthly cost</div><div className="s-num">{money(data.plans.find((p) => p.id === data.customer.plan)?.price || 3)}/mo</div><div className="s-sub">Charged via PayFast</div></div>
+            <div className="dash-card stat"><div className="s-label">Monthly cost</div><div className="s-num">{money(data.plans.find((p) => p.id === data.customer.plan)?.price ?? 0)}/mo</div><div className="s-sub">Charged via PayFast</div></div>
             <div className="dash-card stat"><div className="s-label">Payment method</div><div className="s-num" style={{ fontSize: 22 }}>PayFast</div><div className="s-sub">{pf.sandbox ? 'Sandbox test mode' : 'Live mode'}</div></div>
           </div>
 

@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, KeyRound, Upload, CreditCard, Users, Tag, Settings, User,
-  Search, Moon, Sun, Mail, Menu, ChevronLeft, ChevronRight, LogOut,
+  Moon, Sun, Mail, Menu, ChevronLeft, ChevronRight, LogOut, X,
 } from 'lucide-react';
 import './dashboard.css';
 import { loadStore } from './lib/store';
-import { useSession } from './lib/useStore';
+import { useSession, useDashboard } from './lib/useStore';
+import { useNotifications } from './lib/notifications';
 import Loader from './lib/Loader';
 
 // One fixed admin account. Everyone who signs up is a customer; the admin
@@ -18,7 +19,7 @@ const NAV = [
   { section: 'Main' },
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/dashboard/licenses', label: 'Licenses', icon: KeyRound },
-  { href: '/dashboard/downloads', label: 'Plugin Upload', icon: Upload },
+  { href: '/dashboard/downloads', label: 'Downloads', icon: Upload },
   { href: '/dashboard/billing', label: 'Payments', icon: CreditCard },
   { section: 'Admin', admin: true },
   { href: '/dashboard/admin/users', label: 'Users', icon: Users, admin: true },
@@ -29,13 +30,17 @@ const NAV = [
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [theme, setTheme] = useState('light');
   const [collapsed, setCollapsed] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const [store, setStore] = useState(null);
   const session = useSession();
   const isAdmin = session.user?.role === 'admin';
+  const { data, role } = useDashboard();
+  const notifs = useNotifications(data, role, session.user?.email || '');
 
   useEffect(() => {
     setTheme(window.localStorage.getItem('mps-theme') || 'light');
@@ -55,6 +60,7 @@ export default function DashboardLayout({ children }) {
   }, [session, isAdmin, pathname]);
 
   const logout = async () => {
+    setConfirmLogout(false);
     try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
     window.localStorage.removeItem('mps-role');
     window.location.href = '/';
@@ -68,9 +74,8 @@ export default function DashboardLayout({ children }) {
   const changeTheme = () => { const t = theme === 'light' ? 'dark' : 'light'; setTheme(t); window.localStorage.setItem('mps-theme', t); };
 
   const me = session.user ? { name: session.user.name, email: session.user.email } : (store?.profile || { name: 'Abubakar', email: 'chabubakar78690@gmail.com' });
-  const unread = (store?.notifications || []).filter((n) => n.unread).length;
-  const titles = { '/dashboard': ['Overview', 'Dashboard / Overview'], '/dashboard/licenses': ['Licenses', 'Dashboard / Licenses'], '/dashboard/downloads': ['Plugin Upload', 'Dashboard / Downloads'], '/dashboard/billing': ['Payments', 'Dashboard / Billing'], '/dashboard/profile': ['Profile', 'Dashboard / Profile'], '/dashboard/admin/users': ['Users', 'Dashboard / Admin / Users'], '/dashboard/admin/pricing': ['Pricing', 'Dashboard / Admin / Pricing'], '/dashboard/admin/settings': ['Settings', 'Dashboard / Admin / Settings'] };
-  const [title, crumb] = titles[pathname] || ['Dashboard', 'Dashboard'];
+  const titles = { '/dashboard': 'Overview', '/dashboard/licenses': 'Licenses', '/dashboard/downloads': 'Downloads', '/dashboard/billing': 'Payments', '/dashboard/profile': 'Profile', '/dashboard/admin/users': 'Users', '/dashboard/admin/pricing': 'Pricing', '/dashboard/admin/settings': 'Settings' };
+  const title = titles[pathname] || 'Dashboard';
 
   return (
     <div className="dash" data-theme={theme}>
@@ -90,7 +95,7 @@ export default function DashboardLayout({ children }) {
         <div className="dash-side-foot">
           <div className="dash-avatar">{me.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}</div>
           <div className="who"><b>{me.name}</b><span>{me.email}</span></div>
-          <button className="dash-logout" onClick={logout} title="Log out" aria-label="Log out"><LogOut size={17} /></button>
+          <button className="dash-logout" onClick={() => setConfirmLogout(true)} title="Log out" aria-label="Log out"><LogOut size={17} /></button>
         </div>
         <button className="dash-collapse-float" onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
           {collapsed ? <ChevronRight size={19} /> : <ChevronLeft size={19} />}
@@ -100,25 +105,43 @@ export default function DashboardLayout({ children }) {
       <div className="dash-main">
         <header className="dash-top">
           <button className="dash-icon-btn dash-menu-btn" onClick={() => setDrawer(true)} aria-label="Open menu"><Menu size={19} /></button>
-          <div className="dash-title"><h1>{title}</h1><p className="crumb">{crumb}</p></div>
-          <div className="dash-search"><Search size={17} /><input placeholder="Search licenses, users, payments…" aria-label="Search" /></div>
-          {isAdmin && <Link className="dash-icon-btn dash-top-link" href="/dashboard/admin/settings" title="Login & signup keys (OAuth)" aria-label="Login and signup keys"><KeyRound size={18} /></Link>}
-          <button className="dash-icon-btn" onClick={changeTheme} aria-label="Toggle light / dark mode" title="Light / dark mode">{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</button>
-          <div className="dash-notif">
-            <button className="dash-icon-btn" onClick={() => setNotifOpen(!notifOpen)} aria-label="Notifications"><Mail size={18} />{unread > 0 && <span className="dot" />}</button>
-            {notifOpen && (
-              <div className="dash-notif-pop">
-                <h4>Notifications</h4>
-                {(store?.notifications || []).map((n) => (
-                  <div key={n.id} className={`n-item ${n.unread ? 'unread' : ''}`}>{n.text}<small>{n.time}</small></div>
-                ))}
-              </div>
-            )}
+          <div className="dash-title"><h1>{title}</h1></div>
+          <div className="dash-top-right">
+            {isAdmin && <Link className="dash-icon-btn dash-top-link" href="/dashboard/admin/settings" title="Login & signup keys (OAuth)" aria-label="Login and signup keys"><KeyRound size={18} /></Link>}
+            <button className="dash-icon-btn" onClick={changeTheme} aria-label="Toggle light / dark mode" title="Light / dark mode">{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</button>
+            <div className="dash-notif">
+              <button className="dash-icon-btn" onClick={() => setNotifOpen(!notifOpen)} aria-label="Notifications" title="Notifications"><Mail size={18} />{notifs.unread > 0 && <span className="dot" />}</button>
+              {notifOpen && (
+                <div className="dash-notif-pop">
+                  <div className="n-head"><h4>Notifications</h4>{notifs.unread > 0 && <button onClick={() => notifs.markAllRead()}>Mark all read</button>}</div>
+                  {notifs.items.length === 0 && <p className="n-empty">No notifications yet — activity on your account will show up here.</p>}
+                  {notifs.items.map((n) => (
+                    <div key={n.id} className={`n-item ${n.unread ? 'unread' : ''}`} onClick={() => { notifs.markRead(n.id); setNotifOpen(false); router.push(n.href); }}>
+                      <span className="n-text">{n.text}<small>{n.when}</small></span>
+                      <button className="n-del" aria-label="Delete notification" title="Delete" onClick={(e) => { e.stopPropagation(); notifs.dismiss(n.id); }}><X size={14} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <Link className="dash-avatar" href="/dashboard/profile" title={me.name}>{me.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}</Link>
           </div>
-          <Link className="dash-avatar" href="/dashboard/profile" title={me.name}>{me.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}</Link>
         </header>
         <main className="dash-body">{children}</main>
       </div>
+
+      {confirmLogout && (
+        <div className="dash-modal-backdrop" onClick={() => setConfirmLogout(false)}>
+          <div className="dash-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Log out?</h3>
+            <p>You will be signed out of your dashboard. You can sign back in anytime from the website.</p>
+            <div className="dash-modal-actions">
+              <button className="dash-btn ghost" onClick={() => setConfirmLogout(false)}>Cancel</button>
+              <button className="dash-btn danger" onClick={logout}>Log out</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

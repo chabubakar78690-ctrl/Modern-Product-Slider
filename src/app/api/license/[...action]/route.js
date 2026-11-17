@@ -26,7 +26,9 @@ export async function POST(req, { params }) {
   }
 
   if (action === 'activate') {
-    await db.update('licenses', 'key', key, { status: 'Active' });
+    // Connecting from WordPress: mark the site connected (last_check) so
+    // the dashboard shows "Connected" for this license.
+    await db.update('licenses', 'key', key, { status: 'Active', last_check: new Date().toISOString().slice(0, 16).replace('T', ' ') });
     return json({ ok: true, valid: true, status: 'Active' });
   }
 

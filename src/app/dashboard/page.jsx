@@ -12,12 +12,38 @@ export default function DashboardHome() {
   const revenue = data.payments.filter((p) => p.status === 'Completed').reduce((s, p) => s + p.amount, 0);
   const mrr = data.users.filter((u) => u.status === 'Active' && u.plan !== 'Free').reduce((s, u) => s + (u.plan === 'Unlimited Sites' ? 10 : 3), 0);
   const myLicense = activeLicenses[0];
+  const hasActive = !!myLicense;
   const myPlan = data.plans.find((p) => p.name === (myLicense?.plan || data.customer.planName)) || data.plans.find((p) => p.id === 'single');
+  const freeV = data.freeVersion || { version: '1.0.0', file: 'modern-product-slider-free.zip', size: '—', date: '', notes: 'Free version: WooCommerce product sliders via shortcode and Gutenberg block.' };
 
   if (serverLoading) return <Loader text="Loading your dashboard…" />;
 
   return (
     <>
+      {/* New customers see pricing first: pick Free or a Pro plan, pay, and
+          the rest of the dashboard (licenses, Pro downloads) unlocks. */}
+      {!isAdmin && !hasActive && (
+        <div className="dash-card" style={{ marginBottom: 20 }}>
+          <div className="card-head"><h3>Choose your plan to get started</h3></div>
+          <p style={{ marginBottom: 16 }}>Start free, or upgrade to Pro — once PayFast confirms your payment, your license is created automatically and the Licenses and Downloads pages unlock.</p>
+          <div className="dash-grid three" style={{ marginBottom: 0 }}>
+            {data.plans.map((p) => (
+              <div key={p.id} className="dash-card" style={{ border: p.id === 'unlimited' ? '2px solid #0ea5e9' : '1px solid #e2e8f0' }}>
+                <h3>{p.name}{p.id === 'unlimited' ? ' ★' : ''}</h3>
+                <p style={{ fontSize: 24, fontWeight: 800, color: '#081a3d' }}>{money(p.price)}<small style={{ fontSize: 13, fontWeight: 400 }}>{p.price === 0 ? '/forever' : '/month'}</small></p>
+                <p>{p.desc}</p>
+                <p style={{ marginTop: 8, fontSize: 13 }}>{p.sites} · {p.features[0]}</p>
+                <div style={{ marginTop: 14 }}>
+                  {p.price === 0
+                    ? <a className="dash-btn ghost sm" href="/api/free-download">Download Free plugin</a>
+                    : <Link className="dash-btn blue sm" href="/dashboard/billing">Get {p.name} — {money(p.price)}/mo</Link>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {isAdmin ? (
         <div className="dash-grid">
           <div className="dash-card stat"><div className="stat-ico"><DollarSign size={22} /></div><div className="s-label">Monthly revenue</div><div className="s-num">{money(revenue)}</div><div className="s-sub">↑ 3 completed PayFast payments</div></div>
@@ -29,8 +55,8 @@ export default function DashboardHome() {
         <div className="dash-grid">
           <div className="dash-card stat"><div className="s-label">Your plan</div><div className="s-num" style={{ fontSize: 22 }}>{data.customer.planName}</div><div className="s-sub">Renews {data.customer.renews}</div></div>
           <div className="dash-card stat"><div className="s-label">License status</div><div className="s-num" style={{ fontSize: 22 }}>{data.customer.status}</div><div className="s-sub">{activeLicenses.length} active license{activeLicenses.length === 1 ? '' : 's'}</div></div>
-          <div className="dash-card stat"><div className="s-label">Connected domain</div><div className="s-num" style={{ fontSize: 18 }}>{myLicense ? myLicense.domain : 'No domain connected'}</div><div className="s-sub">Plugin v{myLicense ? myLicense.version : '2.1.0'} installed</div></div>
-          <div className="dash-card stat"><div className="s-label">Next payment</div><div className="s-num">{money(myPlan?.price || 0)}/mo</div><div className="s-sub">Via PayFast · {data.customer.renews}</div></div>
+          <div className="dash-card stat"><div className="s-label">Connected domain</div><div className="s-num" style={{ fontSize: 18 }}>{myLicense ? myLicense.domain : 'No domain connected'}</div><div className="s-sub">{myLicense ? `Plugin v${myLicense.version} installed` : 'Connect your site on the Licenses page'}</div></div>
+          <div className="dash-card stat"><div className="s-label">Next payment</div><div className="s-num">{money(myPlan?.price || 0)}/mo</div><div className="s-sub">{hasActive ? `Via PayFast · ${data.customer.renews}` : 'Free plan — upgrade to unlock Pro'}</div></div>
         </div>
       )}
 
@@ -47,26 +73,39 @@ export default function DashboardHome() {
             <>
               {myLicense ? (
                 <>
-                  <p>Your Pro license is active on <b>{myLicense.domain}</b>. Only stores with an active license receive plugin updates from WordPress.</p>
+                  <p>Your Pro license is active on <b>{myLicense.domain || 'no site connected yet'}</b>. Only stores with an active license receive plugin updates from WordPress.</p>
                   <div className="dash-license-key" style={{ marginTop: 14 }}><span>{myLicense.key}</span><span className="badge green">Active</span></div>
                 </>
               ) : (
-                <p>You have no active license yet. Connect your WordPress domain on the Licenses page to get one.</p>
+                <p>You have no active license yet. Start with the Free plugin, or pick a Pro plan above — your license is created automatically once PayFast confirms the payment.</p>
               )}
-              <div style={{ marginTop: 16, display: 'flex', gap: 10 }}><Link className="dash-btn blue sm" href="/dashboard/licenses">Manage license</Link><Link className="dash-btn ghost sm" href="/dashboard/downloads">Download Pro ZIP</Link></div>
+              <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {myLicense
+                  ? <><Link className="dash-btn blue sm" href="/dashboard/licenses">Manage license</Link><Link className="dash-btn ghost sm" href="/dashboard/downloads">Download Pro ZIP</Link></>
+                  : <><a className="dash-btn blue sm" href="/api/free-download">Download Free plugin</a><Link className="dash-btn ghost sm" href="/dashboard/billing">See Pro pricing</Link></>}
+              </div>
             </>
           )}
         </div>
         <div className="dash-card">
-          <div className="card-head"><h3>Latest plugin version</h3><Link href="/dashboard/downloads">Downloads →</Link></div>
-          {data.versions.filter((v) => v.current).map((v) => (
-            <div key={v.version}>
-              <p style={{ fontSize: 22, fontWeight: 800, color: '#081a3d', margin: '0 0 4px' }}>v{v.version} <span className="badge blue">Current</span></p>
-              <p>{v.notes}</p>
-              <p style={{ marginTop: 10 }}>Released {v.date} · {v.size} · {v.file}</p>
-              <div style={{ marginTop: 16 }}><Link className="dash-btn navy sm" href="/dashboard/downloads">{isAdmin ? 'Manage versions' : 'Download v' + v.version}</Link></div>
+          <div className="card-head"><h3>{isAdmin ? 'Latest plugin version' : hasActive ? 'Latest plugin version' : 'Free plugin'}</h3><Link href="/dashboard/downloads">Downloads →</Link></div>
+          {hasActive || isAdmin ? (
+            data.versions.filter((v) => v.current).map((v) => (
+              <div key={v.version}>
+                <p style={{ fontSize: 22, fontWeight: 800, color: '#081a3d', margin: '0 0 4px' }}>v{v.version} <span className="badge blue">Current</span></p>
+                <p>{v.notes}</p>
+                <p style={{ marginTop: 10 }}>Released {v.date} · {v.size} · {v.file}</p>
+                <div style={{ marginTop: 16 }}><Link className="dash-btn navy sm" href="/dashboard/downloads">{isAdmin ? 'Manage versions' : 'Download v' + v.version}</Link></div>
+              </div>
+            ))
+          ) : (
+            <div>
+              <p style={{ fontSize: 22, fontWeight: 800, color: '#081a3d', margin: '0 0 4px' }}>Free v{freeV.version} <span className="badge blue">Current</span></p>
+              <p>{freeV.notes}</p>
+              <p style={{ marginTop: 10 }}>Released {freeV.date} · {freeV.size} · {freeV.file}</p>
+              <div style={{ marginTop: 16 }}><a className="dash-btn navy sm" href="/api/free-download">Download Free v{freeV.version}</a></div>
             </div>
-          ))}
+          )}
         </div>
       </div>
 

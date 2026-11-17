@@ -10,7 +10,7 @@
 // provider routes return 503 with a clear message.
 import { NextResponse } from 'next/server';
 import { getDb, getSettings, isDemoMode } from '../../lib/db';
-import { hashPassword, checkPassword, createSession, readSession, sessionCookie, clearSessionCookie, json } from '../../lib/auth';
+import { hashPassword, checkPassword, createSession, readSession, requireUser, sessionCookie, clearSessionCookie, json } from '../../lib/auth';
 
 export const dynamic = 'force-dynamic';
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://modern-product-slider.vercel.app';
@@ -98,6 +98,28 @@ export async function POST(req, { params }) {
   if (action === 'logout') {
     const res = json({ ok: true });
     res.headers.set('Set-Cookie', clearSessionCookie());
+    return res;
+  }
+
+  // PUT /api/auth/profile {name, email} — a signed-in user updates their
+  // own name/email. The session cookie is refreshed so the new name shows
+  // everywhere immediately.
+  if (action === 'profile') {
+    const { session, error } = requireUser(req);
+    if (error) return error;
+    const body = await req.json().catch(() => ({}));
+    const name = String(body.name || '').trim();
+    const email = String(body.email || '').trim().toLowerCase();
+    if (!name || !email.includes('@')) return json({ error: 'Enter a valid name and email.' }, 400);
+    const user = await db.find('users', 'email', session.email);
+    if (!user) return json({ error: 'Account not found.' }, 404);
+    if (email !== session.email) {
+      const taken = await db.find('users', 'email', email);
+      if (taken) return json({ error: 'Another account already uses this email.' }, 409);
+    }
+    const updated = await db.update('users', 'email', session.email, { name, email });
+    const res = json({ ok: true, user: { id: updated.id, name: updated.name, email: updated.email, role: updated.role } });
+    res.headers.set('Set-Cookie', sessionCookie(createSession(updated)));
     return res;
   }
 

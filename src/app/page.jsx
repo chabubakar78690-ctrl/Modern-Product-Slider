@@ -259,7 +259,7 @@ export default function Home() {
                     {p.features.map((f, i) => <li key={i}>{f}</li>)}
                   </ul>
                   {p.price === 0
-                    ? <a className="btn ghost" href="#how">Download Free</a>
+                    ? <a className="btn ghost" href="/api/free-download">Download Free</a>
                     : <a className={p.id === 'unlimited' ? 'btn sky' : 'btn'} href="#faq">Get {p.name} (${p.price}/mo) →</a>}
                 </div>
               ))}
@@ -371,7 +371,7 @@ export default function Home() {
               <span className="eyebrow light">Build what’s next</span>
               <h2>Make your products impossible to scroll past.</h2>
               <p>Start free today. Upgrade to Pro for $3/month on one site, or $10/month for unlimited sites.</p>
-              <a className="btn sky" href="#pricing">Download Free — Get Pro</a>
+              <a className="btn sky" href="/api/free-download">Download Free — Get Pro</a>
             </div>
           </div>
         </section>
@@ -385,7 +385,7 @@ export default function Home() {
               <p>Beautiful, fast WooCommerce product sliders. Free on WordPress.org, Pro from $3/month.</p>
             </div>
             <div><h4>Product</h4><a href="#features">Features</a><a href="#pricing">Pricing</a><a href="#how">How it works</a></div>
-            <div><h4>Resources</h4><a href="#faq">FAQ</a><a href="#pricing">Download Free</a><a href="#pricing">Get Pro</a></div>
+            <div><h4>Resources</h4><a href="#faq">FAQ</a><a href="/api/free-download">Download Free</a><a href="#pricing">Get Pro</a></div>
             <div><h4>Company</h4><a href="#top">About</a><a href="#faq">Support</a><a href="#top" onClick={(e) => { e.preventDefault(); setAuthMode('login'); }}>Log in</a></div>
           </div>
           <p className="copy">© 2026 Modern Product Slider. All rights reserved.</p>

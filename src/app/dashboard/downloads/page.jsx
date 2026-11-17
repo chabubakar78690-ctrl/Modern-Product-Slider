@@ -10,6 +10,7 @@ export default function DownloadsPage() {
   const isAdmin = role === 'admin';
   const myActive = data.licenses.find((l) => l.status === 'Active');
   const hasActive = !!myActive;
+  const freeV = data.freeVersion || { version: '1.0.0', file: 'modern-product-slider-free.zip', size: '—', date: '', notes: 'Free version: WooCommerce product sliders via shortcode and Gutenberg block.' };
   const [version, setVersion] = useState('');
   const [notes, setNotes] = useState('');
   const [fileName, setFileName] = useState('');
@@ -71,8 +72,17 @@ export default function DownloadsPage() {
         </div>
       )}
 
+      {!isAdmin && (
+        <div className="dash-card" style={{ marginBottom: 20 }}>
+          <div className="card-head"><h3>Free version</h3><span className="badge blue">No license needed</span></div>
+          <p style={{ marginBottom: 6 }}><b>Free v{freeV.version}</b> — {freeV.notes}</p>
+          <p style={{ marginBottom: 14 }}>Released {freeV.date} · {freeV.size} · {freeV.file}</p>
+          <a className="dash-btn blue sm" href="/api/free-download">Download Free v{freeV.version}</a>
+        </div>
+      )}
+
       <div className="dash-card">
-        <div className="card-head"><h3>Plugin versions</h3><span className="badge blue">{data.versions.length} releases</span></div>
+        <div className="card-head"><h3>Pro versions</h3><span className="badge blue">{data.versions.length} releases</span></div>
         <div className="dash-table-wrap"><table className="dash-table"><thead><tr><th>Version</th><th>Released</th><th>File</th><th>Size</th><th>Release notes</th><th></th></tr></thead><tbody>
           {data.versions.map((v) => (
             <tr key={v.version}>

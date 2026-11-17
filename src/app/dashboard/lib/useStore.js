@@ -58,17 +58,20 @@ export function useDashboard() {
     if (!s.user) return;
     setServerLoading(true);
     try {
-      const [licRes, pluginRes] = await Promise.all([
+      const [licRes, pluginRes, freeRes, payRes] = await Promise.all([
         fetch('/api/licenses').then((r) => (r.ok ? r.json() : null)).catch(() => null),
         fetch('/api/plugin').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch('/api/free-plugin').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch('/api/payments').then((r) => (r.ok ? r.json() : null)).catch(() => null),
       ]);
       let next = null;
       const licenses = (licRes?.licenses || []).map(mapLicense);
+      const payments = (payRes?.payments || []).map(mapPayment);
       const versions = pluginRes ? [{ version: pluginRes.latest_version, date: pluginRes.date, file: pluginRes.file, size: pluginRes.size, current: true, notes: pluginRes.notes }] : null;
+      const freeVersion = freeRes ? { version: freeRes.latest_version, file: freeRes.file, size: freeRes.size, date: freeRes.date, notes: freeRes.notes } : null;
       if (s.user.role === 'admin') {
-        const [usersRes, payRes, ovRes, setRes] = await Promise.all([
+        const [usersRes, ovRes, setRes] = await Promise.all([
           fetch('/api/admin/users').then((r) => (r.ok ? r.json() : null)).catch(() => null),
-          fetch('/api/admin/payments').then((r) => (r.ok ? r.json() : null)).catch(() => null),
           fetch('/api/admin/overview').then((r) => (r.ok ? r.json() : null)).catch(() => null),
           fetch('/api/admin/settings').then((r) => (r.ok ? r.json() : null)).catch(() => null),
         ]);
@@ -83,8 +86,9 @@ export function useDashboard() {
           ...prev,
           licenses,
           users,
-          payments: (payRes?.payments || []).map(mapPayment),
+          payments,
           versions: ovRes?.versions?.length ? ovRes.versions : (versions || prev.versions),
+          freeVersion: freeVersion || prev.freeVersion,
           settings: setRes ? { oauth: setRes.oauth || prev.settings.oauth, payfast: setRes.payfast || prev.settings.payfast } : prev.settings,
           profile: { ...prev.profile, name: s.user.name, email: s.user.email },
         });
@@ -93,7 +97,9 @@ export function useDashboard() {
         next = (prev) => ({
           ...prev,
           licenses,
+          payments,
           versions: versions || prev.versions,
+          freeVersion: freeVersion || prev.freeVersion,
           customer: {
             ...prev.customer,
             name: s.user.name, email: s.user.email,

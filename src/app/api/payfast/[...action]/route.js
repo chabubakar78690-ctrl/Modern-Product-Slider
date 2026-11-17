@@ -13,6 +13,11 @@ import { buildCheckoutFields, verifyItnSignature, resolvePayfastHosts, confirmWi
 
 export const dynamic = 'force-dynamic';
 
+function newKey() {
+  const part = () => Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
+  return `MPS-${part()}-${part()}-${part()}`;
+}
+
 export async function POST(req, { params }) {
   const action = params.action?.[0];
   const db = getDb();
@@ -74,9 +79,24 @@ export async function POST(req, { params }) {
         method: 'PayFast', status: 'Completed',
         created_at: new Date().toISOString().slice(0, 10),
       });
-      // Activate (or create) the buyer's license.
+      // Activate the buyer's license — or create it if this is their first
+      // payment. Without this, a new customer who pays would have no license
+      // and the dashboard would stay locked after checkout.
       const existing = (await db.all('licenses')).find((l) => l.user_email === (form.email_address || ''));
+      const versions = await db.all('versions');
+      const currentVersion = (versions.find((v) => v.current) || versions[0])?.version || '2.1.0';
       if (existing) await db.update('licenses', 'key', existing.key, { status: 'Active', plan: planName });
+      else await db.insert('licenses', {
+        id: 'LIC-' + Math.floor(1000 + Math.random() * 9000),
+        key: newKey(),
+        user_email: form.email_address || '',
+        plan: planName,
+        domain: '',
+        status: 'Active',
+        version: currentVersion,
+        created_at: new Date().toISOString().slice(0, 10),
+        last_check: '—',
+      });
     }
     return new Response('OK', { status: 200 });
   }

@@ -29,6 +29,20 @@ export default function ProfilePage() {
       } catch {
         if (!session.demo) { setSaved('Could not reach the server — profile was not saved.'); setBusy(false); return; }
       }
+    } else {
+      // Customers save on the server too — name/email change is real, and
+      // the session is refreshed so the new name shows everywhere.
+      try {
+        const res = await fetch('/api/auth/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email }) });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(d.error || 'server save failed');
+        setSaved('Profile saved.');
+        setBusy(false);
+        window.location.reload();
+        return;
+      } catch (err) {
+        if (!session.demo) { setSaved('Could not reach the server — profile was not saved (' + err.message + ').'); setBusy(false); return; }
+      }
     }
     update((d) => isAdmin ? { ...d, profile: { ...d.profile, name, email } } : { ...d, customer: { ...d.customer, name, email } });
     setSaved('Profile saved.');
@@ -46,7 +60,13 @@ export default function ProfilePage() {
         <form onSubmit={save}>
           <div className="dash-field"><label htmlFor="name">Full name</label><input id="name" value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div className="dash-field"><label htmlFor="email">Email</label><input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-          {!isAdmin && <div className="dash-field"><label>Plan</label><input value={data.customer.planName + ' — renews ' + data.customer.renews} readOnly /></div>}
+          {!isAdmin && (
+            <div className="dash-field">
+              <label>Plan</label>
+              <div className="dash-plan-readonly"><span>{data.customer.planName} — renews {data.customer.renews}</span><a href="/dashboard/billing">Upgrade</a></div>
+              <p className="hint">Your plan changes only through Billing — it cannot be edited here.</p>
+            </div>
+          )}
           <button className="dash-btn blue" type="submit" disabled={busy}>{busy ? <><BtnSpinner />Saving…</> : 'Save profile'}</button>
         </form>
       </div>

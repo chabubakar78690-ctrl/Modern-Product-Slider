@@ -29,11 +29,12 @@
 .dash-side-foot .who{flex:1;min-width:0}
 .dash-side-foot .who b{display:block;color:#fff;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dash-side-foot .who span{font-size:11px;color:#94a3b8;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dash-logout{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;color:#94a3b8;flex-shrink:0;transition:background .2s ease,color .2s ease,transform .2s ease}
-.dash-logout:hover{background:rgba(255,255,255,.1);color:#fff;transform:scale(1.08)}
+.dash-logout{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#cbd5e1;flex-shrink:0;cursor:pointer;transition:background .2s ease,color .2s ease,border-color .2s ease,transform .2s ease}
+.dash-logout:hover{background:rgba(239,68,68,.18);color:#fca5a5;border-color:rgba(239,68,68,.45);transform:scale(1.08)}
 .dash-side.collapsed .dash-side-foot .who{display:none}
-/* Floating collapse button: half inside the sidebar, half outside, at the bottom */
-.dash-collapse-float{position:absolute;right:0;bottom:34px;transform:translateX(50%);width:40px;height:40px;border-radius:50%;border:1px solid #bae6fd;background:#e0f2fe;color:#081a3d;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(8,26,61,.3);z-index:50;transition:background .2s ease,color .2s ease,transform .2s ease}
+/* Floating collapse button: half inside the sidebar, half outside, above
+   the footer so the user row (avatar, name, email, log out) stays fully visible */
+.dash-collapse-float{position:absolute;right:0;bottom:96px;transform:translateX(50%);width:40px;height:40px;border-radius:50%;border:1px solid #bae6fd;background:#e0f2fe;color:#081a3d;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(8,26,61,.3);z-index:50;transition:background .2s ease,color .2s ease,transform .2s ease}
 .dash-collapse-float:hover{background:#0ea5e9;color:#fff;transform:translateX(50%) scale(1.1)}
 .dash-backdrop{display:none}
 
@@ -46,10 +47,7 @@
 .dash-top h1{font-size:20px;margin:0;color:#081a3d}
 .dash[data-theme="dark"] .dash-top h1{color:#fff}
 .dash-top .crumb{font-size:12px;color:#5b6b82;margin:0}
-.dash-search{flex:1;max-width:420px;display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid #dbe7f3;border-radius:12px;padding:9px 14px;transition:border-color .2s ease,box-shadow .2s ease}
-.dash-search:focus-within{border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.15)}
-.dash[data-theme="dark"] .dash-search{background:#111c33;border-color:#1e293b}
-.dash-search input{border:0;outline:none;background:transparent;flex:1;font-size:14px;font-family:inherit;color:inherit}
+.dash-top-right{margin-left:auto;display:flex;align-items:center;gap:14px}
 .dash-icon-btn{width:40px;height:40px;border-radius:50%;border:1.5px solid #dbe7f3;background:#fff;cursor:pointer;font-size:16px;color:#334155;position:relative;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .2s ease,color .2s ease,border-color .2s ease,transform .2s ease}
 .dash-icon-btn:hover{border-color:#0ea5e9;color:#0284c7;transform:scale(1.08);box-shadow:0 6px 16px rgba(14,165,233,.18)}
 .dash-icon-btn svg{transition:transform .25s ease}
@@ -69,8 +67,15 @@
 .dash-notif{position:relative}
 .dash-notif-pop{position:absolute;right:0;top:48px;width:320px;max-width:90vw;background:#fff;border:1px solid #dbe7f3;border-radius:14px;box-shadow:0 20px 50px rgba(8,26,61,.18);padding:8px;z-index:60}
 .dash[data-theme="dark"] .dash-notif-pop{background:#111c33;border-color:#1e293b}
-.dash-notif-pop h4{margin:8px 12px 6px;font-size:14px}
-.dash-notif-pop .n-item{padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.5;color:#334155}
+.dash-notif-pop h4{margin:0;font-size:14px}
+.n-head{display:flex;align-items:center;justify-content:space-between;margin:8px 12px 6px}
+.n-head button{border:0;background:none;color:#0284c7;font-size:12px;font-weight:600;cursor:pointer;padding:2px 0}
+.n-head button:hover{text-decoration:underline}
+.dash-notif-pop .n-item{padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.5;color:#334155;display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.dash-notif-pop .n-item .n-text{flex:1;min-width:0}
+.dash-notif-pop .n-del{border:0;background:none;color:#94a3b8;cursor:pointer;padding:3px;border-radius:6px;flex-shrink:0;display:flex}
+.dash-notif-pop .n-del:hover{color:#ef4444;background:#fee2e2}
+.n-empty{padding:20px 12px;text-align:center;color:#94a3b8;font-size:13px;line-height:1.6}
 .dash[data-theme="dark"] .dash-notif-pop .n-item{color:#cbd5e1}
 .dash-notif-pop .n-item:hover{background:#f1f5f9}
 .dash[data-theme="dark"] .dash-notif-pop .n-item:hover{background:#1e293b}
@@ -188,7 +193,6 @@
   .dash-collapse-float{display:none}
   .dash-menu-btn{display:flex}
   .dash-top{padding:12px 16px;flex-wrap:wrap}
-  .dash-search{order:3;flex-basis:100%;max-width:none}
   .dash-body{padding:18px 16px}
   .dash-grid{grid-template-columns:1fr}
   .dash-row{grid-template-columns:1fr}
@@ -196,6 +200,22 @@
   .dash-table-wrap{overflow-x:auto}
   .dash-table{min-width:640px}
 }
+
+/* Log out confirmation modal */
+.dash-modal-backdrop{position:fixed;inset:0;background:rgba(8,26,61,.55);z-index:80;display:flex;align-items:center;justify-content:center;padding:16px}
+.dash-modal{background:#fff;border-radius:18px;padding:24px;max-width:380px;width:100%;box-shadow:0 24px 60px rgba(8,26,61,.3)}
+.dash[data-theme="dark"] .dash-modal{background:#111c33;border:1px solid #1e293b}
+.dash-modal h3{margin:0 0 8px;font-size:17px;color:#081a3d}
+.dash[data-theme="dark"] .dash-modal h3{color:#fff}
+.dash-modal p{margin:0;color:#5b6b82;font-size:14px;line-height:1.6}
+.dash[data-theme="dark"] .dash-modal p{color:#94a3b8}
+.dash-modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+
+/* Read-only plan display on the profile page (a plan is never edited
+   by typing — it only changes through Billing / checkout) */
+.dash-plan-readonly{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f8fafc;border:1.5px solid #dbe7f3;border-radius:11px;padding:11px 13px;font-size:14px;color:#0f172a}
+.dash[data-theme="dark"] .dash-plan-readonly{background:#0b1220;border-color:#1e293b;color:#e2e8f0}
+.dash-plan-readonly a{color:#0284c7;font-weight:600;font-size:13px;white-space:nowrap}
 
 /* Shared loader — logo mark + spinner ring */
 .mps-loader{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:60vh;color:#5b6b82;font-size:14px}
