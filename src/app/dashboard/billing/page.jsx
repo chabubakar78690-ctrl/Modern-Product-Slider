@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useDashboard, useRole, money } from '../lib/useStore';
 import { PAYFAST } from '../lib/store';
+import { usePagination, Pagination } from '../lib/Pagination';
 import Loader, { BtnSpinner } from '../lib/Loader';
 
 export default function BillingPage() {
@@ -16,6 +17,8 @@ export default function BillingPage() {
   const pf = data.settings.payfast;
   const plan = data.plans.find((p) => p.id === selected) || data.plans[2];
   const endpoint = pf.sandbox ? PAYFAST.sandboxUrl : PAYFAST.liveUrl;
+  const historyRows = isAdmin ? data.payments : data.payments.filter((p) => p.user === data.customer.email);
+  const { pageItems: historyPage, page: historyPageNo, setPage: setHistoryPage, pages: historyPages } = usePagination(historyRows, 8);
 
   // PayFast returns here after checkout (?payfast=success / cancelled).
   // The return alone is never proof of payment — the ITN webhook is — so
@@ -138,10 +141,12 @@ export default function BillingPage() {
       <div className="dash-card">
         <div className="card-head"><h3>{isAdmin ? 'All payments' : 'Payment history'}</h3><span className="badge blue">{data.payments.length} payments</span></div>
         <div className="dash-table-wrap"><table className="dash-table"><thead><tr><th>Payment</th><th>Date</th><th>Customer</th><th>Plan</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead><tbody>
-          {(isAdmin ? data.payments : data.payments.filter((p) => p.user === data.customer.email)).map((p) => (
+          {historyPage.map((p) => (
             <tr key={p.id}><td className="mono">{p.id}</td><td>{p.date}</td><td>{p.user}</td><td>{p.plan}</td><td>{money(p.amount)}</td><td>{p.method}</td><td><span className={`badge ${p.status === 'Completed' ? 'green' : 'red'}`}>{p.status}</span></td></tr>
           ))}
         </tbody></table></div>
+        {historyRows.length === 0 && <p className="dash-empty">No payments yet.</p>}
+        <Pagination page={historyPageNo} pages={historyPages} onPage={setHistoryPage} />
       </div>
     </>
   );

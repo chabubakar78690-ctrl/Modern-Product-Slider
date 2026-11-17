@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useDashboard, useRole } from '../lib/useStore';
 import { resetStore } from '../lib/store';
+import AdminSettings from '../lib/AdminSettings';
 import Loader, { BtnSpinner } from '../lib/Loader';
 
 export default function ProfilePage() {
@@ -52,6 +53,7 @@ export default function ProfilePage() {
   if (serverLoading) return <Loader text="Loading profile…" />;
 
   return (
+    <>
     <div className="dash-grid two">
       <div className="dash-card">
         <h3>Your profile</h3>
@@ -77,12 +79,23 @@ export default function ProfilePage() {
           <div><b>Email</b>{me.email}</div>
           <div><b>Two-factor</b><span className="badge amber">Not enabled</span></div>
         </div>
-        <p style={{ marginTop: 16 }}>Signed in as {session.user ? session.user.email : me.email}. {isAdmin ? 'Change the admin name, email or password in Admin → Settings → Admin account.' : 'Your licenses and payments belong to this account.'}</p>
+        <p style={{ marginTop: 16 }}>Signed in as {session.user ? session.user.email : me.email}. {isAdmin ? 'Change the admin name, email or password in Admin settings below.' : 'Your licenses and payments belong to this account.'}</p>
         <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <a className="dash-btn ghost" href="/">← Back to website</a>
           {session.demo && <button className="dash-btn danger" onClick={() => { resetStore(); window.location.reload(); }}>Reset demo data</button>}
         </div>
       </div>
     </div>
+
+    {isAdmin && (
+      <div style={{ marginTop: 4 }}>
+        <div className="card-head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <h3 style={{ margin: 0, fontSize: 17, color: '#081a3d' }}>Admin settings</h3>
+          <span className="badge blue">Admin only</span>
+        </div>
+        <AdminSettings />
+      </div>
+    )}
+    </>
   );
 }

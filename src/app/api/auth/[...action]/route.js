@@ -5,7 +5,7 @@
 // GET  /api/auth/me                              -> current session user
 // GET  /api/auth/google | /api/auth/facebook     -> start OAuth
 // GET  /api/auth/google/callback | /api/auth/facebook/callback -> finish OAuth
-// OAuth needs the keys from Admin > Settings > Social login (or env vars
+// OAuth needs the keys from Profile > Admin settings > Social login (or env vars
 // GOOGLE_CLIENT_ID/SECRET, FACEBOOK_APP_ID/SECRET). Without them the
 // provider routes return 503 with a clear message.
 import { NextResponse } from 'next/server';
@@ -145,7 +145,7 @@ export async function GET(req, { params }) {
     const settings = await getSettings();
     const cfg = oauthConfig(settings, action);
     if (!cfg.clientId) {
-      return json({ error: `${action} sign-in is not configured yet. Add the Client ID and Secret in Admin > Settings > Social login (or set the env vars).` }, 503);
+      return json({ error: `${action} sign-in is not configured yet. Add the Client ID and Secret in Profile > Admin settings > Social login (or set the env vars).` }, 503);
     }
     const url = action === 'google'
       ? `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(cfg.clientId)}&redirect_uri=${encodeURIComponent(cfg.redirect)}&response_type=code&scope=${encodeURIComponent('openid email profile')}`

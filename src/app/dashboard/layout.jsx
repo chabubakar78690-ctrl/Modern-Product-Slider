@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  LayoutDashboard, KeyRound, Upload, CreditCard, Users, Tag, Settings, User,
+  LayoutDashboard, KeyRound, Upload, CreditCard, Users, Tag, User, Bell,
   Moon, Sun, Mail, Menu, ChevronLeft, ChevronRight, LogOut, X,
 } from 'lucide-react';
 import './dashboard.css';
@@ -21,10 +21,10 @@ const NAV = [
   { href: '/dashboard/licenses', label: 'Licenses', icon: KeyRound },
   { href: '/dashboard/downloads', label: 'Downloads', icon: Upload },
   { href: '/dashboard/billing', label: 'Payments', icon: CreditCard },
+  { href: '/dashboard/notifications', label: 'Notifications', icon: Bell },
   { section: 'Admin', admin: true },
   { href: '/dashboard/admin/users', label: 'Users', icon: Users, admin: true },
   { href: '/dashboard/admin/pricing', label: 'Pricing', icon: Tag, admin: true },
-  { href: '/dashboard/admin/settings', label: 'Settings', icon: Settings, admin: true },
   { href: '/dashboard/profile', label: 'Profile', icon: User },
 ];
 
@@ -67,14 +67,14 @@ export default function DashboardLayout({ children }) {
   };
 
   if (session.loading) {
-    return <div className="dash" data-theme={theme}><Loader text="Checking your session…" /></div>;
+    return <div className="dash" data-theme={theme}><div className="dash-loading"><Loader text="Checking your session…" /></div></div>;
   }
   if (!session.user && !session.demo) return null;
 
   const changeTheme = () => { const t = theme === 'light' ? 'dark' : 'light'; setTheme(t); window.localStorage.setItem('mps-theme', t); };
 
   const me = session.user ? { name: session.user.name, email: session.user.email } : (store?.profile || { name: 'Abubakar', email: 'chabubakar78690@gmail.com' });
-  const titles = { '/dashboard': 'Overview', '/dashboard/licenses': 'Licenses', '/dashboard/downloads': 'Downloads', '/dashboard/billing': 'Payments', '/dashboard/profile': 'Profile', '/dashboard/admin/users': 'Users', '/dashboard/admin/pricing': 'Pricing', '/dashboard/admin/settings': 'Settings' };
+  const titles = { '/dashboard': 'Overview', '/dashboard/licenses': 'Licenses', '/dashboard/downloads': 'Downloads', '/dashboard/billing': 'Payments', '/dashboard/notifications': 'Notifications', '/dashboard/profile': 'Profile', '/dashboard/admin/users': 'Users', '/dashboard/admin/pricing': 'Pricing' };
   const title = titles[pathname] || 'Dashboard';
 
   return (
@@ -89,6 +89,7 @@ export default function DashboardLayout({ children }) {
           {NAV.filter((item) => !item.admin || isAdmin).map((item, i) => item.section ? <h5 key={i}>{item.section}</h5> : (
             <Link key={item.href} href={item.href} className={pathname === item.href ? 'active' : ''} onClick={() => setDrawer(false)} title={item.label}>
               <item.icon size={21} strokeWidth={2} /><span className="lbl">{item.label}</span>
+              {item.href === '/dashboard/notifications' && notifs.unread > 0 && <span className="nav-badge">{notifs.unread}</span>}
             </Link>
           ))}
         </nav>
@@ -107,7 +108,7 @@ export default function DashboardLayout({ children }) {
           <button className="dash-icon-btn dash-menu-btn" onClick={() => setDrawer(true)} aria-label="Open menu"><Menu size={19} /></button>
           <div className="dash-title"><h1>{title}</h1></div>
           <div className="dash-top-right">
-            {isAdmin && <Link className="dash-icon-btn dash-top-link" href="/dashboard/admin/settings" title="Login & signup keys (OAuth)" aria-label="Login and signup keys"><KeyRound size={18} /></Link>}
+            {isAdmin && <Link className="dash-icon-btn dash-top-link" href="/dashboard/profile" title="Admin settings (in Profile)" aria-label="Admin settings"><KeyRound size={18} /></Link>}
             <button className="dash-icon-btn" onClick={changeTheme} aria-label="Toggle light / dark mode" title="Light / dark mode">{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</button>
             <div className="dash-notif">
               <button className="dash-icon-btn" onClick={() => setNotifOpen(!notifOpen)} aria-label="Notifications" title="Notifications"><Mail size={18} />{notifs.unread > 0 && <span className="dot" />}</button>
@@ -115,12 +116,17 @@ export default function DashboardLayout({ children }) {
                 <div className="dash-notif-pop">
                   <div className="n-head"><h4>Notifications</h4>{notifs.unread > 0 && <button onClick={() => notifs.markAllRead()}>Mark all read</button>}</div>
                   {notifs.items.length === 0 && <p className="n-empty">No notifications yet — activity on your account will show up here.</p>}
-                  {notifs.items.map((n) => (
+                  {notifs.items.slice(0, 5).map((n) => (
                     <div key={n.id} className={`n-item ${n.unread ? 'unread' : ''}`} onClick={() => { notifs.markRead(n.id); setNotifOpen(false); router.push(n.href); }}>
                       <span className="n-text">{n.text}<small>{n.when}</small></span>
                       <button className="n-del" aria-label="Delete notification" title="Delete" onClick={(e) => { e.stopPropagation(); notifs.dismiss(n.id); }}><X size={14} /></button>
                     </div>
                   ))}
+                  {notifs.items.length > 0 && (
+                    <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 4, paddingTop: 8, textAlign: 'center' }}>
+                      <Link href="/dashboard/notifications" onClick={() => setNotifOpen(false)} style={{ fontSize: 13, color: '#0284c7', fontWeight: 600 }}>View all notifications →</Link>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

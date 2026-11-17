@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useDashboard, useRole, money } from '../lib/useStore';
+import { usePagination, Pagination } from '../lib/Pagination';
 import Loader, { BtnSpinner } from '../lib/Loader';
 
 function newKey() {
@@ -26,6 +27,7 @@ export default function LicensesPage() {
   const activeLicense = myLicenses.find((l) => l.status === 'Active');
   const unconnected = myLicenses.find((l) => l.status === 'Active' && !l.domain);
   const connected = (l) => l.lastCheck && l.lastCheck !== '—';
+  const { pageItems, page, setPage, pages } = usePagination(myLicenses, 8);
 
   // Connect a WordPress site to the paid license: attach the domain, then
   // the customer installs the plugin in WordPress and activates the key
@@ -142,7 +144,7 @@ export default function LicensesPage() {
       <div className="dash-card">
         <div className="card-head"><h3>{isAdmin ? 'All licenses' : 'Your licenses'}</h3><span className="badge blue">{myLicenses.length} total</span></div>
         <div className="dash-table-wrap"><table className="dash-table"><thead><tr><th>License key</th><th>Plan</th><th>Domain</th><th>Version</th><th>Status</th><th>Connection</th><th>Last check</th><th></th></tr></thead><tbody>
-          {myLicenses.map((l) => (
+          {pageItems.map((l) => (
             <tr key={l.id}>
               <td className="mono">{l.key}</td><td>{l.plan}</td><td>{l.domain || '—'}</td><td>v{l.version}</td>
               <td><span className={`badge ${l.status === 'Active' ? 'green' : 'red'}`}>{l.status}</span></td>
@@ -158,6 +160,7 @@ export default function LicensesPage() {
           ))}
         </tbody></table></div>
         {myLicenses.length === 0 && <p className="dash-empty">No licenses yet — pick a Pro plan on the Billing page, or start with the Free plugin above.</p>}
+        <Pagination page={page} pages={pages} onPage={setPage} />
       </div>
     </>
   );

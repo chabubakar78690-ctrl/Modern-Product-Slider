@@ -59,7 +59,7 @@ Then redeploy (Deployments → ⋯ → Redeploy).
 - **Google:** Google Cloud Console → create OAuth client (Web) →
   Authorized redirect URI:
   `https://modern-product-slider.vercel.app/api/auth/google/callback`
-  Put the Client ID + Secret in Admin → Settings → Social login
+  Put the Client ID + Secret in Profile → Admin settings → Social login
   (or the `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` env vars).
 - **Facebook:** Meta Developers → Facebook Login → redirect URI:
   `https://modern-product-slider.vercel.app/api/auth/facebook/callback`
@@ -74,7 +74,7 @@ Sandbox already works with the test credentials
 Try it: Dashboard → Billing → upgrade a plan → Confirm sandbox payment.
 
 For **live** payments: create a PayFast merchant account, then in
-Admin → Settings → PayFast turn **Sandbox OFF** and enter your live
+Profile → Admin settings → PayFast turn **Sandbox OFF** and enter your live
 Merchant ID, Merchant Key and Passphrase (must match
 PayFast → Settings → Security). Note: PayFast is a South African
 gateway — a live merchant account needs South African business/bank

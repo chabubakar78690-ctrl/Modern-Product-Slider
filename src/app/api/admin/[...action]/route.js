@@ -78,6 +78,38 @@ export async function PUT(req, { params }) {
     if (!row) return json({ error: 'User not found' }, 404);
     return json({ ok: true, user: row });
   }
+  // Admin changes a customer's plan. The plan lives on their license:
+  // Free expires their licenses; a paid plan activates their latest
+  // license (or creates one with no domain yet — they connect a site
+  // after that). The dashboard derives each user's plan from licenses.
+  if (action === 'users' && body.email && body.plan) {
+    const email = String(body.email).toLowerCase();
+    const { plans } = await getSettings();
+    const plan = plans.find((p) => p.name === body.plan) || plans.find((p) => p.id === body.plan);
+    if (!plan) return json({ error: 'Unknown plan' }, 400);
+    const user = await db.find('users', 'email', email);
+    if (!user) return json({ error: 'User not found' }, 404);
+    const mine = (await db.all('licenses')).filter((l) => l.user_email === email);
+    if (plan.price <= 0) {
+      for (const l of mine) await db.update('licenses', 'key', l.key, { status: 'Expired' });
+    } else {
+      const versions = await db.all('versions');
+      const currentVersion = (versions.find((v) => v.current) || versions[0])?.version || '2.1.0';
+      const latest = mine[mine.length - 1];
+      if (latest) await db.update('licenses', 'key', latest.key, { plan: plan.name, status: 'Active' });
+      else {
+        const part = () => Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
+        await db.insert('licenses', {
+          id: 'LIC-' + Math.floor(1000 + Math.random() * 9000),
+          key: `MPS-${part()}-${part()}-${part()}`,
+          user_email: email, plan: plan.name, domain: '', status: 'Active',
+          version: currentVersion, created_at: new Date().toISOString().slice(0, 10), last_check: '—',
+        });
+      }
+      await db.update('users', 'email', email, { status: 'Active' });
+    }
+    return json({ ok: true });
+  }
   if (action === 'account') {
     const patch = {};
     if (body.name) patch.name = String(body.name).trim();

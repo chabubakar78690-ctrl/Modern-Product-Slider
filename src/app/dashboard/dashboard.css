@@ -32,9 +32,13 @@
 .dash-logout{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#cbd5e1;flex-shrink:0;cursor:pointer;transition:background .2s ease,color .2s ease,border-color .2s ease,transform .2s ease}
 .dash-logout:hover{background:rgba(239,68,68,.18);color:#fca5a5;border-color:rgba(239,68,68,.45);transform:scale(1.08)}
 .dash-side.collapsed .dash-side-foot .who{display:none}
+/* Collapsed sidebar: stack avatar above log out so both stay fully
+   visible (in a row they overflowed the 78px sidebar and the log out
+   button was cut off at the edge). */
+.dash-side.collapsed .dash-side-foot{flex-direction:column;padding:14px 0;gap:12px;justify-content:center}
 /* Floating collapse button: half inside the sidebar, half outside, above
    the footer so the user row (avatar, name, email, log out) stays fully visible */
-.dash-collapse-float{position:absolute;right:0;bottom:96px;transform:translateX(50%);width:40px;height:40px;border-radius:50%;border:1px solid #bae6fd;background:#e0f2fe;color:#081a3d;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(8,26,61,.3);z-index:50;transition:background .2s ease,color .2s ease,transform .2s ease}
+.dash-collapse-float{position:absolute;right:0;bottom:128px;transform:translateX(50%);width:40px;height:40px;border-radius:50%;border:1px solid #bae6fd;background:#e0f2fe;color:#081a3d;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(8,26,61,.3);z-index:50;transition:background .2s ease,color .2s ease,transform .2s ease}
 .dash-collapse-float:hover{background:#0ea5e9;color:#fff;transform:translateX(50%) scale(1.1)}
 .dash-backdrop{display:none}
 
@@ -216,6 +220,24 @@
 .dash-plan-readonly{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f8fafc;border:1.5px solid #dbe7f3;border-radius:11px;padding:11px 13px;font-size:14px;color:#0f172a}
 .dash[data-theme="dark"] .dash-plan-readonly{background:#0b1220;border-color:#1e293b;color:#e2e8f0}
 .dash-plan-readonly a{color:#0284c7;font-weight:600;font-size:13px;white-space:nowrap}
+
+/* Session loading screen — centred, not stuck to the left edge */
+.dash-loading{flex:1;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.dash-loading .mps-loader{min-height:0}
+
+/* Sidebar unread badge on the Notifications link */
+.dash-nav a{position:relative}
+.nav-badge{margin-left:auto;background:#ef4444;color:#fff;border-radius:999px;font-size:11px;line-height:1;padding:3px 7px;font-weight:700}
+.dash-side.collapsed .nav-badge{display:none}
+
+/* Pagination — keeps long tables light (8 rows per page) */
+.dash-pagination{display:flex;align-items:center;gap:6px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.dash-page-btn{border:1.5px solid #dbe7f3;background:#fff;color:#334155;border-radius:9px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer}
+.dash-page-btn:hover:not(:disabled){border-color:#0ea5e9;color:#0284c7}
+.dash-page-btn.on{background:#0ea5e9;border-color:#0ea5e9;color:#fff}
+.dash-page-btn:disabled{opacity:.45;cursor:not-allowed}
+.dash[data-theme="dark"] .dash-page-btn{background:#111c33;border-color:#1e293b;color:#e2e8f0}
+.dash-page-ellipsis{color:#94a3b8;font-size:13px;padding:0 2px}
 
 /* Shared loader — logo mark + spinner ring */
 .mps-loader{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:60vh;color:#5b6b82;font-size:14px}

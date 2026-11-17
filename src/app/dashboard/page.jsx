@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { DollarSign, Users, KeyRound, TrendingUp } from 'lucide-react';
 import { useDashboard, money } from './lib/useStore';
+import { usePagination, Pagination } from './lib/Pagination';
 import Loader from './lib/Loader';
 
 export default function DashboardHome() {
@@ -15,6 +16,7 @@ export default function DashboardHome() {
   const hasActive = !!myLicense;
   const myPlan = data.plans.find((p) => p.name === (myLicense?.plan || data.customer.planName)) || data.plans.find((p) => p.id === 'single');
   const freeV = data.freeVersion || { version: '1.0.0', file: 'modern-product-slider-free.zip', size: '—', date: '', notes: 'Free version: WooCommerce product sliders via shortcode and Gutenberg block.' };
+  const { pageItems: licensePage, page: licensePageNo, setPage: setLicensePage, pages: licensePages } = usePagination(data.licenses, 8);
 
   if (serverLoading) return <Loader text="Loading your dashboard…" />;
 
@@ -112,11 +114,14 @@ export default function DashboardHome() {
       <div className="dash-card">
         <div className="card-head"><h3>{isAdmin ? 'All licenses' : 'How licensing works'}</h3><Link href="/dashboard/licenses">View licenses →</Link></div>
         {isAdmin ? (
+          <>
           <div className="dash-table-wrap"><table className="dash-table"><thead><tr><th>License</th><th>Plan</th><th>Domain</th><th>Status</th><th>Last check</th></tr></thead><tbody>
-            {data.licenses.map((l) => (
+            {licensePage.map((l) => (
               <tr key={l.id}><td className="mono">{l.key}</td><td>{l.plan}</td><td>{l.domain}</td><td><span className={`badge ${l.status === 'Active' ? 'green' : 'red'}`}>{l.status}</span></td><td>{l.lastCheck}</td></tr>
             ))}
           </tbody></table></div>
+          <Pagination page={licensePageNo} pages={licensePages} onPage={setLicensePage} />
+          </>
         ) : (
           <p>Connect your WordPress domain, copy the license key into the plugin settings, and activate it. Your store then gets Pro features and updates for as long as your plan is active. If a plan expires or is cancelled, the license stops working and the plugin no longer updates — it falls back to the Free version.</p>
         )}

@@ -95,13 +95,24 @@ const SOCIALS = [
   ) },
 ];
 
-function AuthModal({ mode, onClose, onSwitch }) {
+function AuthModal({ mode, onClose, onSwitch, initialError }) {
   const [showAll, setShowAll] = useState(false);
   const [attempted, setAttempted] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(initialError || '');
   const [busy, setBusy] = useState(false);
+  const [providers, setProviders] = useState(null);
   const isLogin = mode === 'login';
-  const visibleSocials = showAll ? SOCIALS : SOCIALS.slice(0, 2);
+  // Only show the providers the admin turned ON in the dashboard
+  // (Profile > Admin settings > Social login). Facebook/Apple are off
+  // by default, so they stay hidden until the admin enables them.
+  const enabledSocials = providers
+    ? SOCIALS.filter((s) => s.id === 'passkey' || providers[s.id])
+    : SOCIALS;
+  const visibleSocials = showAll ? enabledSocials : enabledSocials.slice(0, 2);
+
+  useEffect(() => {
+    fetch('/api/auth/providers').then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) setProviders(d); }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -131,14 +142,14 @@ function AuthModal({ mode, onClose, onSwitch }) {
     } finally { setBusy(false); }
   };
 
-  const social = async (id) => {
+  const social = (id) => {
     if (id === 'apple') { setError('Sign in with Apple needs an Apple Developer key — not set up yet. Use Google or email for now.'); setAttempted(true); return; }
     if (id === 'passkey') { setError('Passkeys are not wired up yet — use Google or email for now.'); setAttempted(true); return; }
-    try {
-      const res = await fetch(`/api/auth/${id}`);
-      if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.error || `${id} sign-in is not configured yet.`); }
-      window.location.href = `/api/auth/${id}`;
-    } catch (err) { setError(err.message); setAttempted(true); }
+    // Go straight to the provider. Do NOT fetch the URL first: it redirects
+    // to accounts.google.com / facebook.com, and the browser blocks reading
+    // that cross-origin response, so the fetch always fails with
+    // "Failed to fetch" even though sign-in itself works.
+    window.location.href = `/api/auth/${id}`;
   };
 
   return (
@@ -158,7 +169,7 @@ function AuthModal({ mode, onClose, onSwitch }) {
             <button key={s.id} type="button" onClick={() => social(s.id)}><span className="auth-ico">{s.icon}</span>{s.label}</button>
           ))}
         </div>
-        <button className="auth-more" type="button" onClick={() => setShowAll(!showAll)}>{showAll ? 'Less options' : 'More options'}</button>
+        {enabledSocials.length > 2 && <button className="auth-more" type="button" onClick={() => setShowAll(!showAll)}>{showAll ? 'Less options' : 'More options'}</button>}
         <div className="auth-or">OR</div>
         <form onSubmit={submit}>
           {!isLogin && (
@@ -201,7 +212,9 @@ function Accordion({ items }) {
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [authMode, setAuthMode] = useState(null);
+  const [authError, setAuthError] = useState('');
   const [plans, setPlans] = useState(DEFAULT_PLANS);
+  const [signedIn, setSignedIn] = useState(false);
   useReveal();
 
   // Prices come from the server (/api/pricing) so an admin price change in
@@ -210,16 +223,27 @@ export default function Home() {
     fetch('/api/pricing').then((r) => (r.ok ? r.json() : null)).then((d) => { if (d?.plans?.length) setPlans(d.plans); }).catch(() => {});
   }, []);
 
-  // The dashboard sends signed-out visitors here with ?auth=login so the
-  // login popup opens straight away.
+  // Signed-in visitors see a Dashboard button instead of Log in.
   useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get('auth');
+    fetch('/api/auth/me').then((r) => (r.ok ? r.json() : null)).then((d) => { if (d?.user) setSignedIn(true); }).catch(() => {});
+  }, []);
+
+  // The dashboard sends signed-out visitors here with ?auth=login so the
+  // login popup opens straight away. A failed Google/Facebook sign-in comes
+  // back as ?auth=error&detail=... — show that reason in the popup.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('auth');
     if (q === 'login' || q === 'signup') setAuthMode(q);
+    if (q === 'error') {
+      setAuthMode('login');
+      setAuthError(params.get('detail') || 'Social sign-in failed. Please try again or use email.');
+    }
   }, []);
 
   return (
     <>
-      {authMode && <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onSwitch={setAuthMode} />}
+      {authMode && <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onSwitch={setAuthMode} initialError={authError} />}
       <header className="nav">
         <div className="container nav-inner">
           <a className="brand" href="#top" aria-label="Modern Product Slider — home">
@@ -233,10 +257,11 @@ export default function Home() {
             <a href="#pricing" onClick={() => setMenuOpen(false)}>Pricing</a>
             <a href="#how" onClick={() => setMenuOpen(false)}>How it works</a>
             <a href="#faq" onClick={() => setMenuOpen(false)}>FAQ</a>
-            <a href="/dashboard" onClick={() => setMenuOpen(false)}>Dashboard</a>
           </nav>
           <div className="nav-actions">
-            <button className="btn ghost small" type="button" onClick={() => setAuthMode('login')}>Log in</button>
+            {signedIn
+              ? <a className="btn navy small" href="/dashboard">Dashboard</a>
+              : <button className="btn ghost small" type="button" onClick={() => setAuthMode('login')}>Log in</button>}
             <button className="btn blue small" type="button" onClick={() => setAuthMode('signup')}>Get Pro</button>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useDashboard, useRole } from '../lib/useStore';
+import { usePagination, Pagination } from '../lib/Pagination';
 import Loader, { BtnSpinner } from '../lib/Loader';
 
 export default function DownloadsPage() {
@@ -11,6 +12,7 @@ export default function DownloadsPage() {
   const myActive = data.licenses.find((l) => l.status === 'Active');
   const hasActive = !!myActive;
   const freeV = data.freeVersion || { version: '1.0.0', file: 'modern-product-slider-free.zip', size: '—', date: '', notes: 'Free version: WooCommerce product sliders via shortcode and Gutenberg block.' };
+  const { pageItems: versionPage, page: versionPageNo, setPage: setVersionPage, pages: versionPages } = usePagination(data.versions, 8);
   const [version, setVersion] = useState('');
   const [notes, setNotes] = useState('');
   const [fileName, setFileName] = useState('');
@@ -84,13 +86,14 @@ export default function DownloadsPage() {
       <div className="dash-card">
         <div className="card-head"><h3>Pro versions</h3><span className="badge blue">{data.versions.length} releases</span></div>
         <div className="dash-table-wrap"><table className="dash-table"><thead><tr><th>Version</th><th>Released</th><th>File</th><th>Size</th><th>Release notes</th><th></th></tr></thead><tbody>
-          {data.versions.map((v) => (
+          {versionPage.map((v) => (
             <tr key={v.version}>
               <td><b>v{v.version}</b> {v.current && <span className="badge blue">Current</span>}</td><td>{v.date}</td><td className="mono">{v.file}</td><td>{v.size}</td><td style={{ maxWidth: 260 }}>{v.notes}</td>
               <td>{(isAdmin || hasActive) ? <button className="dash-btn blue sm" onClick={() => download(v)}>Download</button> : <span className="badge grey">Locked</span>}</td>
             </tr>
           ))}
         </tbody></table></div>
+        <Pagination page={versionPageNo} pages={versionPages} onPage={setVersionPage} />
       </div>
     </>
   );
