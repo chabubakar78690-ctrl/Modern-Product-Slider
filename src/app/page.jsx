@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { loginWithPasskey } from './dashboard/lib/webauthn';
 import { BtnSpinner } from './dashboard/lib/Loader';
 
 const DEFAULT_PLANS = [
@@ -142,14 +143,27 @@ function AuthModal({ mode, onClose, onSwitch, initialError }) {
     } finally { setBusy(false); }
   };
 
-  const social = (id) => {
+  const social = async (id) => {
     if (id === 'apple') { setError('Sign in with Apple needs an Apple Developer key — not set up yet. Use Google or email for now.'); setAttempted(true); return; }
-    if (id === 'passkey') { setError('Passkeys are not wired up yet — use Google or email for now.'); setAttempted(true); return; }
-    // Go straight to the provider. Do NOT fetch the URL first: it redirects
-    // to accounts.google.com / facebook.com, and the browser blocks reading
-    // that cross-origin response, so the fetch always fails with
-    // "Failed to fetch" even though sign-in itself works.
-    window.location.href = `/api/auth/${id}`;
+    if (id === 'passkey') {
+      try {
+        setBusy(true);
+        await loginWithPasskey();
+        window.location.href = '/dashboard';
+      } catch (err) {
+        // Cancelled picker / no passkey on this device — say so plainly.
+        const msg = err?.name === 'NotAllowedError'
+          ? 'Passkey sign-in was cancelled. Sign in with email instead, or add a passkey in Profile → Passkeys.'
+          : (err.message || 'Passkey sign-in failed.');
+        setError(msg);
+        setAttempted(true);
+      } finally { setBusy(false); }
+      return;
+    }
+    // Google / Facebook open in a NEW tab. After sign-in that tab closes
+    // itself and this tab goes to the dashboard (see /auth/done).
+    const w = window.open(`/api/auth/${id}`, '_blank', 'width=640,height=720');
+    if (!w) window.location.href = `/api/auth/${id}`;
   };
 
   return (
@@ -181,7 +195,6 @@ function AuthModal({ mode, onClose, onSwitch, initialError }) {
           </div>
           <button className="auth-submit" type="submit" disabled={busy}>{busy ? <><BtnSpinner />Please wait…</> : 'Continue'}</button>
         </form>
-        <button className="auth-sso" type="button" onClick={() => { setError('SSO is not set up yet — use Google or email for now.'); setAttempted(true); }}>Continue with SSO</button>
         {error && <p className="auth-note" style={{ background: '#fef2f2', borderColor: '#fecaca', color: '#b91c1c' }}>{error}</p>}
         {attempted && !error && (
           <p className="auth-note">Account sign-in is not connected yet — this is the front-end of the popup. Connecting Google, Apple, Facebook and email sign-in is the next step. Meanwhile you can explore the <a href="/dashboard" style={{ color: '#1d4ed8', fontWeight: 600 }}>dashboard demo →</a></p>

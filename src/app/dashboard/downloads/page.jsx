@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDashboard, useRole } from '../lib/useStore';
 import { usePagination, Pagination } from '../lib/Pagination';
 import Loader, { BtnSpinner } from '../lib/Loader';
@@ -18,6 +18,47 @@ export default function DownloadsPage() {
   const [fileName, setFileName] = useState('');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  // Real ZIP upload (admin): the file is stored in the database and served
+  // by /api/download / /api/free-download, so no repo or FTP step is needed.
+  const [zipKind, setZipKind] = useState('pro');
+  const [zipVersion, setZipVersion] = useState('');
+  const [zipFile, setZipFile] = useState(null);
+  const [zipMsg, setZipMsg] = useState('');
+  const [zipBusy, setZipBusy] = useState(false);
+  const [storedZips, setStoredZips] = useState(null);
+
+  const loadStoredZips = async () => {
+    if (!isAdmin) return;
+    try {
+      const d = await (await fetch('/api/admin/uploads')).json();
+      setStoredZips(d);
+    } catch {}
+  };
+  useEffect(() => { loadStoredZips(); }, [isAdmin]);
+
+  const uploadZip = async (e) => {
+    e.preventDefault();
+    if (!zipFile) { setZipMsg('Please choose a .zip file first.'); return; }
+    setZipBusy(true);
+    setZipMsg('');
+    try {
+      const form = new FormData();
+      form.append('kind', zipKind);
+      form.append('version', zipVersion.trim());
+      form.append('file', zipFile);
+      const res = await fetch('/api/admin/upload-plugin', { method: 'POST', body: form });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || 'upload failed');
+      setZipMsg(`${zipKind === 'pro' ? 'Pro' : 'Free'} ZIP uploaded: ${d.file} (v${d.version}, ${d.size}). ${zipKind === 'pro' ? 'It is now the current Pro version — downloads work right away.' : 'The free download now serves this file.'}`);
+      setZipFile(null);
+      setZipVersion('');
+      e.target.reset();
+      await loadStoredZips();
+      await refreshServer();
+    } catch (err) {
+      setZipMsg('Upload failed: ' + err.message);
+    } finally { setZipBusy(false); }
+  };
 
   const upload = async (e) => {
     e.preventDefault();
@@ -28,7 +69,7 @@ export default function DownloadsPage() {
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || 'publish failed');
       await refreshServer();
-      setMsg(`Version ${version.trim()} published on the server. Stores with an active license will now see this update in WordPress. Remember: the ZIP file itself must also be in the downloads/ folder of the repo, or the download will 404.`);
+      setMsg(`Version ${version.trim()} published on the server. Stores with an active license will now see this update in WordPress. The download serves the Pro ZIP built from the repo on deploy — or the ZIP you uploaded above, if you uploaded one for this version.`);
     } catch (err) {
       if (!session.demo) { setMsg('Could not publish on the server: ' + err.message); return; }
       update((d) => ({
@@ -61,8 +102,34 @@ export default function DownloadsPage() {
       )}
       {isAdmin && (
         <div className="dash-card" style={{ marginBottom: 20 }}>
-          <h3>Upload a new Pro version</h3>
-          <p style={{ marginBottom: 16 }}>Publish a Pro version. It becomes the current version immediately — only stores with an active license can download it or update from WordPress. The ZIP file itself must be in the <code>downloads/</code> folder of the repo (same file name as below), otherwise the download returns 404.</p>
+          <h3>Upload plugin ZIP</h3>
+          <p style={{ marginBottom: 16 }}>Upload the actual ZIP file here — Free or Pro. It is stored on the server and served straight away: the Pro ZIP becomes the current version for license-gated downloads, the Free ZIP replaces the free download. (The Pro ZIP is also built automatically from the repo on every deploy, so this is only needed when you want a different file.) Max ~4 MB.</p>
+          {storedZips && (
+            <p style={{ marginBottom: 14, fontSize: 13, color: '#5b6b82' }}>
+              Stored now: Free — {storedZips.free ? `${storedZips.free.file} (v${storedZips.free.version}, ${storedZips.free.size})` : 'built from repo'} · Pro — {storedZips.pro ? `${storedZips.pro.file} (v${storedZips.pro.version}, ${storedZips.pro.size})` : 'built from repo'}
+            </p>
+          )}
+          {zipMsg && <p className="dash-note green">{zipMsg}</p>}
+          <form onSubmit={uploadZip}>
+            <div className="dash-row">
+              <div className="dash-field"><label htmlFor="zipkind">Which plugin</label>
+                <select id="zipkind" value={zipKind} onChange={(e) => setZipKind(e.target.value)} style={{ padding: '10px 12px', borderRadius: 10, border: '1.5px solid #dbe7f3', fontSize: 14, fontFamily: 'inherit', width: '100%' }}>
+                  <option value="pro">Pro plugin</option>
+                  <option value="free">Free plugin</option>
+                </select>
+              </div>
+              <div className="dash-field"><label htmlFor="zipver">Version</label><input id="zipver" value={zipVersion} onChange={(e) => setZipVersion(e.target.value)} placeholder={zipKind === 'pro' ? '2.2.3' : '1.0.0'} /></div>
+              <div className="dash-field"><label htmlFor="zipfile">ZIP file</label><input id="zipfile" type="file" accept=".zip" onChange={(e) => setZipFile(e.target.files?.[0] || null)} /></div>
+            </div>
+            <button className="dash-btn blue" type="submit" disabled={zipBusy}>{zipBusy ? <><BtnSpinner />Uploading…</> : 'Upload ZIP'}</button>
+          </form>
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="dash-card" style={{ marginBottom: 20 }}>
+          <h3>Publish a new Pro version</h3>
+          <p style={{ marginBottom: 16 }}>Publish a Pro version number. It becomes the current version immediately — only stores with an active license can download it or update from WordPress. The ZIP itself is built from the repo on every deploy, or use the Upload plugin ZIP card above to upload a specific file.</p>
           <form onSubmit={upload}>
             <div className="dash-row">
               <div className="dash-field"><label htmlFor="ver">Version</label><input id="ver" value={version} onChange={(e) => setVersion(e.target.value)} placeholder="2.2.0" /></div>

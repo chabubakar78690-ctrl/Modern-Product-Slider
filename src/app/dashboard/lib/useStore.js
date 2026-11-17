@@ -37,7 +37,10 @@ function planIdFor(name) {
 export function useDashboard() {
   const [data, setData] = useState(SEED);
   const [ready, setReady] = useState(false);
-  const [serverLoading, setServerLoading] = useState(false);
+  // Start loading: the seed data is only a demo placeholder, and signed-in
+  // users must never see it flash for a second after login while the real
+  // server data is still on its way.
+  const [serverLoading, setServerLoading] = useState(true);
   const session = useSession();
   const sessionRef = useRef(session);
   sessionRef.current = session;
@@ -117,7 +120,9 @@ export function useDashboard() {
   }, []);
 
   useEffect(() => {
-    if (!session.loading && session.user) refreshServer();
+    if (session.loading) return;
+    if (session.user) refreshServer();
+    else setServerLoading(false); // nobody signed in — demo data is the content
   }, [session.loading, session.user, refreshServer]);
 
   // Local edits (demo mode, or optimistic updates after a server call).

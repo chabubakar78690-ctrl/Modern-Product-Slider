@@ -39,7 +39,7 @@ export default function DashboardLayout({ children }) {
   const [store, setStore] = useState(null);
   const session = useSession();
   const isAdmin = session.user?.role === 'admin';
-  const { data, role } = useDashboard();
+  const { data, role, serverLoading } = useDashboard();
   const notifs = useNotifications(data, role, session.user?.email || '');
 
   useEffect(() => {
@@ -89,7 +89,7 @@ export default function DashboardLayout({ children }) {
           {NAV.filter((item) => !item.admin || isAdmin).map((item, i) => item.section ? <h5 key={i}>{item.section}</h5> : (
             <Link key={item.href} href={item.href} className={pathname === item.href ? 'active' : ''} onClick={() => setDrawer(false)} title={item.label}>
               <item.icon size={21} strokeWidth={2} /><span className="lbl">{item.label}</span>
-              {item.href === '/dashboard/notifications' && notifs.unread > 0 && <span className="nav-badge">{notifs.unread}</span>}
+              {item.href === '/dashboard/notifications' && !serverLoading && notifs.unread > 0 && <span className="nav-badge">{notifs.unread}</span>}
             </Link>
           ))}
         </nav>
@@ -111,18 +111,19 @@ export default function DashboardLayout({ children }) {
             {isAdmin && <Link className="dash-icon-btn dash-top-link" href="/dashboard/profile" title="Admin settings (in Profile)" aria-label="Admin settings"><KeyRound size={18} /></Link>}
             <button className="dash-icon-btn" onClick={changeTheme} aria-label="Toggle light / dark mode" title="Light / dark mode">{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</button>
             <div className="dash-notif">
-              <button className="dash-icon-btn" onClick={() => setNotifOpen(!notifOpen)} aria-label="Notifications" title="Notifications"><Mail size={18} />{notifs.unread > 0 && <span className="dot" />}</button>
+              <button className="dash-icon-btn" onClick={() => setNotifOpen(!notifOpen)} aria-label="Notifications" title="Notifications"><Mail size={18} />{!serverLoading && notifs.unread > 0 && <span className="dot" />}</button>
               {notifOpen && (
                 <div className="dash-notif-pop">
-                  <div className="n-head"><h4>Notifications</h4>{notifs.unread > 0 && <button onClick={() => notifs.markAllRead()}>Mark all read</button>}</div>
-                  {notifs.items.length === 0 && <p className="n-empty">No notifications yet — activity on your account will show up here.</p>}
-                  {notifs.items.slice(0, 5).map((n) => (
+                  <div className="n-head"><h4>Notifications</h4>{!serverLoading && notifs.unread > 0 && <button onClick={() => notifs.markAllRead()}>Mark all read</button>}</div>
+                  {serverLoading && <p className="n-empty">Loading notifications…</p>}
+                  {!serverLoading && notifs.items.length === 0 && <p className="n-empty">No notifications yet — activity on your account will show up here.</p>}
+                  {!serverLoading && notifs.items.slice(0, 5).map((n) => (
                     <div key={n.id} className={`n-item ${n.unread ? 'unread' : ''}`} onClick={() => { notifs.markRead(n.id); setNotifOpen(false); router.push(n.href); }}>
                       <span className="n-text">{n.text}<small>{n.when}</small></span>
                       <button className="n-del" aria-label="Delete notification" title="Delete" onClick={(e) => { e.stopPropagation(); notifs.dismiss(n.id); }}><X size={14} /></button>
                     </div>
                   ))}
-                  {notifs.items.length > 0 && (
+                  {!serverLoading && notifs.items.length > 0 && (
                     <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 4, paddingTop: 8, textAlign: 'center' }}>
                       <Link href="/dashboard/notifications" onClick={() => setNotifOpen(false)} style={{ fontSize: 13, color: '#0284c7', fontWeight: 600 }}>View all notifications →</Link>
                     </div>

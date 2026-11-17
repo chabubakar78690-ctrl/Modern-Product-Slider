@@ -64,6 +64,10 @@ const supabaseAdapter = {
     const rows = await sbFetch(`${table}?${encodeURIComponent(field)}=eq.${encodeURIComponent(value)}`, 'PATCH', patch);
     return Array.isArray(rows) ? rows[0] : rows;
   },
+  async remove(table, field, value) {
+    await sbFetch(`${table}?${encodeURIComponent(field)}=eq.${encodeURIComponent(value)}`, 'DELETE');
+    return true;
+  },
   async setting(key) {
     const row = await this.find('settings', 'key', key);
     return row ? row.value : null;
@@ -132,6 +136,12 @@ const localAdapter = {
     Object.assign(row, clone(patch));
     saveLocalTables(tables);
     return clone(row);
+  },
+  async remove(table, field, value) {
+    const tables = localTables();
+    tables[table] = (tables[table] || []).filter((r) => String(r[field]) !== String(value));
+    saveLocalTables(tables);
+    return true;
   },
   async setting(key) {
     const row = (localTables().settings || []).find((r) => r.key === key);

@@ -171,11 +171,13 @@ export async function GET(req, { params }) {
       }
       if (!profile.email) throw new Error('No email returned by provider');
       const user = await findOrCreateOAuthUser(db, { email: profile.email, name: profile.name, provider: action });
-      const res = NextResponse.redirect(`${SITE}/dashboard`);
+      // Sign-in opens in a new tab: land on /auth/done, which closes this
+      // tab and sends the original tab to the dashboard.
+      const res = NextResponse.redirect(`${SITE}/auth/done`);
       res.headers.set('Set-Cookie', sessionCookie(createSession(user)));
       return res;
     } catch (e) {
-      return NextResponse.redirect(`${SITE}/?auth=error&detail=${encodeURIComponent(e.message)}`);
+      return NextResponse.redirect(`${SITE}/auth/done?error=${encodeURIComponent(e.message)}`);
     }
   }
 

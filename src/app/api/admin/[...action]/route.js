@@ -32,6 +32,15 @@ export async function GET(req, { params }) {
   if (action === 'versions') return json({ versions: await db.all('versions') });
   if (action === 'pricing') { const { plans } = await getSettings(); return json({ plans }); }
   if (action === 'settings') { const s = await getSettings(); return json({ oauth: s.oauth, payfast: s.payfast, demo: isDemoMode() }); }
+  // Plugin ZIPs the admin uploaded in Downloads (metadata only — the
+  // base64 data stays in the database and is served by /api/download).
+  if (action === 'uploads') {
+    const meta = async (key) => {
+      const z = await db.setting(key).catch(() => null);
+      return z ? { version: z.version, file: z.file, size: z.size, date: z.date } : null;
+    };
+    return json({ free: await meta('free_zip'), pro: await meta('pro_zip') });
+  }
   return json({ error: 'Unknown admin action' }, 404);
 }
 
@@ -40,6 +49,44 @@ export async function POST(req, { params }) {
   if (error) return error;
   const db = getDb();
   const action = params.action?.[0];
+
+  // Upload a plugin ZIP (multipart form: kind=free|pro, version?, file).
+  // Stored in the database (base64) because the serverless filesystem does
+  // not persist uploads. A Pro upload also becomes the current published
+  // version, so /api/download serves it right away. Max ~4 MB (Vercel
+  // request limit).
+  if (action === 'upload-plugin') {
+    const form = await req.formData().catch(() => null);
+    if (!form) return json({ error: 'No file received.' }, 400);
+    const kind = String(form.get('kind') || '');
+    const file = form.get('file');
+    if (kind !== 'free' && kind !== 'pro') return json({ error: 'Choose Free or Pro.' }, 400);
+    if (!file || typeof file.arrayBuffer !== 'function' || !String(file.name || '').toLowerCase().endsWith('.zip')) {
+      return json({ error: 'Please choose a .zip file.' }, 400);
+    }
+    const buf = Buffer.from(await file.arrayBuffer());
+    if (buf.length > 4_500_000) return json({ error: 'ZIP is too large (max ~4 MB).' }, 400);
+    const version = String(form.get('version') || '').trim();
+    const today = new Date().toISOString().slice(0, 10);
+    const size = (buf.length / 1024).toFixed(0) + ' KB';
+    if (kind === 'free') {
+      const v = version || '1.0.0';
+      await db.saveSetting('free_zip', { version: v, file: file.name, size, date: today, data: buf.toString('base64') });
+      return json({ ok: true, kind, version: v, file: file.name, size }, 201);
+    }
+    const versions = await db.all('versions');
+    const current = versions.find((v) => v.current) || versions[0];
+    const v = version || current?.version || '2.1.0';
+    for (const row of versions) {
+      if (row.version !== v) await db.update('versions', 'version', row.version, { current: false });
+    }
+    const existing = versions.find((row) => row.version === v);
+    if (existing) await db.update('versions', 'version', v, { file: file.name, size, current: true, notes: 'Uploaded by admin.' });
+    else await db.insert('versions', { version: v, date: today, file: file.name, size, current: true, notes: 'Uploaded by admin.' });
+    await db.saveSetting('pro_zip', { version: v, file: file.name, size, date: today, data: buf.toString('base64') });
+    return json({ ok: true, kind, version: v, file: file.name, size }, 201);
+  }
+
   const body = await req.json().catch(() => ({}));
 
   if (action === 'versions') {

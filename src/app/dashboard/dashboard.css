@@ -117,13 +117,17 @@
 
 /* Tables */
 .dash-table{width:100%;border-collapse:collapse;font-size:14px}
-.dash-table th{text-align:left;padding:10px 12px;color:#5b6b82;font-size:12px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e2e8f0}
-.dash[data-theme="dark"] .dash-table th{color:#94a3b8;border-color:#1e293b}
+.dash-table th{text-align:left;padding:10px 12px;color:#5b6b82;font-size:12px;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #e2e8f0;background:#f8fafc}
+.dash[data-theme="dark"] .dash-table th{color:#94a3b8;border-color:#1e293b;background:#0f172a}
 .dash-table td{padding:12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
 .dash[data-theme="dark"] .dash-table td{border-color:#1e293b}
+.dash-table tbody tr:hover{background:#f8fafc}
+.dash[data-theme="dark"] .dash-table tbody tr:hover{background:#0f172a}
 .dash-table tr:last-child td{border-bottom:0}
-.dash-table .mono{font-family:ui-monospace,Menlo,monospace;font-size:12.5px}
-.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600}
+.dash-table .mono{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;white-space:nowrap}
+/* Tables that must not wrap mid-value (license keys, domains, plans). */
+.dash-table.nowrap td{white-space:nowrap}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
 .badge.green{background:#dcfce7;color:#15803d}
 .badge.amber{background:#fef3c7;color:#b45309}
 .badge.red{background:#fee2e2;color:#b91c1c}
