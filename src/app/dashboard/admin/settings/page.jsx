@@ -17,9 +17,13 @@ export default function SettingsPage() {
   const [showSecrets, setShowSecrets] = useState(false);
   const [oauth, setOauth] = useState(data.settings.oauth);
   const [payfast, setPayfast] = useState(data.settings.payfast);
+  const [adminName, setAdminName] = useState(data.profile.name);
+  const [adminEmail, setAdminEmail] = useState(data.profile.email);
+  const [adminPass, setAdminPass] = useState('');
 
   const saveSocial = () => { update((d) => ({ ...d, settings: { ...d.settings, oauth } })); setSaved('Social login keys saved. These are used by the server to run Google / Facebook / Apple sign-in — never expose the secrets in the browser in production.'); };
   const savePayfast = () => { update((d) => ({ ...d, settings: { ...d.settings, payfast } })); setSaved('PayFast settings saved. ' + (payfast.sandbox ? 'Sandbox mode is ON — test payments use the sandbox credentials.' : 'Live mode is ON — real payments will be charged. Double-check the merchant ID and passphrase.')); };
+  const saveAdmin = () => { update((d) => ({ ...d, profile: { ...d.profile, name: adminName, email: adminEmail } })); setSaved('Admin account updated. This is the one fixed admin account for the dashboard.'); };
   const fillSandbox = () => setPayfast((p) => ({ ...p, sandbox: true, merchantId: PAYFAST.sandboxMerchantId, merchantKey: PAYFAST.sandboxMerchantKey, passphrase: '' }));
 
   const mask = (v) => showSecrets ? v : (v ? '••••••••' + v.slice(-4) : '');
@@ -30,6 +34,7 @@ export default function SettingsPage() {
       <div className="dash-tabs">
         <button className={tab === 'social' ? 'on' : ''} onClick={() => setTab('social')}>Social login (OAuth)</button>
         <button className={tab === 'payfast' ? 'on' : ''} onClick={() => setTab('payfast')}>PayFast payments</button>
+        <button className={tab === 'account' ? 'on' : ''} onClick={() => setTab('account')}>Admin account</button>
       </div>
 
       {tab === 'social' && (
@@ -81,6 +86,18 @@ export default function SettingsPage() {
             <button className="dash-btn ghost" onClick={() => setShowSecrets(!showSecrets)}>{showSecrets ? 'Hide secrets' : 'Show secrets'}</button>
           </div>
           <p style={{ marginTop: 14, fontSize: 13, color: '#5b6b82' }}>Sandbox test credentials: Merchant ID <span className="mono">{PAYFAST.sandboxMerchantId}</span> · Merchant Key <span className="mono">{mask(PAYFAST.sandboxMerchantKey)}</span></p>
+        </div>
+      )}
+      {tab === 'account' && (
+        <div className="dash-card">
+          <h3>Admin account</h3>
+          <p style={{ marginBottom: 16 }}>There is one fixed admin account for this dashboard. Change the name, email or password here — it updates the sidebar, the topbar avatar and the Profile page. (In production the password change is verified server-side.)</p>
+          <div className="dash-row">
+            <div className="dash-field"><label htmlFor="aname">Admin name</label><input id="aname" value={adminName} onChange={(e) => setAdminName(e.target.value)} /></div>
+            <div className="dash-field"><label htmlFor="aemail">Admin email</label><input id="aemail" type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} /></div>
+          </div>
+          <div className="dash-field"><label htmlFor="apass">New password</label><input id="apass" type="password" value={adminPass} onChange={(e) => setAdminPass(e.target.value)} placeholder="Leave blank to keep the current password" /><p className="hint">Use at least 8 characters with a mix of letters and numbers.</p></div>
+          <button className="dash-btn blue" onClick={saveAdmin}>Save admin account</button>
         </div>
       )}
     </>

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { DollarSign, Users, KeyRound, TrendingUp } from 'lucide-react';
 import { useDashboard, money } from './lib/useStore';
 
 export default function DashboardHome() {
@@ -14,10 +15,10 @@ export default function DashboardHome() {
     <>
       {isAdmin ? (
         <div className="dash-grid">
-          <div className="dash-card stat"><div className="s-label">Monthly revenue</div><div className="s-num">{money(revenue)}</div><div className="s-sub">↑ 3 completed PayFast payments</div></div>
-          <div className="dash-card stat"><div className="s-label">Active customers</div><div className="s-num">{data.users.filter((u) => u.status === 'Active').length}</div><div className="s-sub">of {data.users.length} total users</div></div>
-          <div className="dash-card stat"><div className="s-label">Active licenses</div><div className="s-num">{activeLicenses.length}</div><div className="s-sub">{data.licenses.length} issued in total</div></div>
-          <div className="dash-card stat"><div className="s-label">Est. MRR</div><div className="s-num">{money(mrr)}/mo</div><div className="s-sub warn">Based on active paid plans</div></div>
+          <div className="dash-card stat"><div className="stat-ico"><DollarSign size={22} /></div><div className="s-label">Monthly revenue</div><div className="s-num">{money(revenue)}</div><div className="s-sub">↑ 3 completed PayFast payments</div></div>
+          <div className="dash-card stat"><div className="stat-ico"><Users size={22} /></div><div className="s-label">Active customers</div><div className="s-num">{data.users.filter((u) => u.status === 'Active').length}</div><div className="s-sub">of {data.users.length} total users</div></div>
+          <div className="dash-card stat"><div className="stat-ico"><KeyRound size={22} /></div><div className="s-label">Active licenses</div><div className="s-num">{activeLicenses.length}</div><div className="s-sub">{data.licenses.length} issued in total</div></div>
+          <div className="dash-card stat"><div className="stat-ico"><TrendingUp size={22} /></div><div className="s-label">Est. MRR</div><div className="s-num">{money(mrr)}/mo</div><div className="s-sub warn">Based on active paid plans</div></div>
         </div>
       ) : (
         <div className="dash-grid">

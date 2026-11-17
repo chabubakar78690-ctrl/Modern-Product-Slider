@@ -5,42 +5,56 @@
 .dash button{font-family:inherit}
 
 /* Sidebar */
-.dash-side{width:264px;flex-shrink:0;background:#081a3d;color:#cbd5e1;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;transition:width .25s ease;z-index:40}
+.dash-side{width:264px;flex-shrink:0;background:#081a3d;color:#cbd5e1;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;transition:width .25s ease;z-index:40;overflow:visible}
 .dash-side.collapsed{width:78px}
-.dash-brand{display:flex;align-items:center;gap:12px;padding:20px 18px 14px}
-.dash-brand img{height:40px;flex-shrink:0}
-.dash-brand .b-name{color:#fff;font-weight:700;font-size:15px;line-height:1.25;white-space:nowrap}
+.dash-brand{display:flex;align-items:center;gap:12px;padding:0 18px;height:72px;flex-shrink:0;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.08)}
+.dash-brand .dash-mark{width:42px;height:42px;flex-shrink:0;border-radius:12px}
+.dash-brand .b-text{min-width:0}
+.dash-brand .b-name{color:#fff;font-weight:700;font-size:15px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dash-brand .b-sub{color:#7dd3fc;font-size:11px;white-space:nowrap}
-.dash-side.collapsed .b-name,.dash-side.collapsed .b-sub{display:none}
+.dash-side.collapsed .b-text{display:none}
+.dash-side.collapsed .dash-brand{justify-content:center;padding:0}
 .dash-nav{flex:1;overflow-y:auto;padding:8px 12px}
 .dash-nav h5{margin:16px 10px 8px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#64748b;font-weight:600;white-space:nowrap}
 .dash-side.collapsed .dash-nav h5{display:none}
-.dash-nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;color:#cbd5e1;font-size:14px;font-weight:500;margin-bottom:2px;white-space:nowrap}
+.dash-nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;color:#cbd5e1;font-size:14.5px;font-weight:500;margin-bottom:2px;white-space:nowrap;transition:background .2s ease,color .2s ease,transform .2s ease}
+.dash-nav a:hover{transform:translateX(3px)}
 .dash-nav a:hover{background:rgba(255,255,255,.08);color:#fff}
 .dash-nav a.active{background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;box-shadow:0 8px 20px rgba(14,165,233,.35)}
-.dash-nav a .ic{font-size:17px;width:22px;text-align:center;flex-shrink:0}
+.dash-nav a svg{flex-shrink:0;transition:transform .2s ease}
+.dash-nav a:hover svg{transform:scale(1.15)}
 .dash-side.collapsed .dash-nav a{justify-content:center;padding:11px 0}
 .dash-side.collapsed .dash-nav a span.lbl{display:none}
 .dash-side-foot{padding:14px;border-top:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:10px}
 .dash-side-foot .who{flex:1;min-width:0}
 .dash-side-foot .who b{display:block;color:#fff;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dash-side-foot .who span{font-size:11px;color:#94a3b8}
+.dash-side-foot .who span{font-size:11px;color:#94a3b8;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash-logout{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;color:#94a3b8;flex-shrink:0;transition:background .2s ease,color .2s ease,transform .2s ease}
+.dash-logout:hover{background:rgba(255,255,255,.1);color:#fff;transform:scale(1.08)}
 .dash-side.collapsed .dash-side-foot .who{display:none}
-.dash-collapse{width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:15px;flex-shrink:0;line-height:1}
-.dash-collapse:hover{background:#0ea5e9}
+/* Floating collapse button: half inside the sidebar, half outside, at the bottom */
+.dash-collapse-float{position:absolute;right:0;bottom:34px;transform:translateX(50%);width:40px;height:40px;border-radius:50%;border:1px solid #bae6fd;background:#e0f2fe;color:#081a3d;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(8,26,61,.3);z-index:50;transition:background .2s ease,color .2s ease,transform .2s ease}
+.dash-collapse-float:hover{background:#0ea5e9;color:#fff;transform:translateX(50%) scale(1.1)}
 .dash-backdrop{display:none}
 
 /* Main */
 .dash-main{flex:1;min-width:0;display:flex;flex-direction:column}
 .dash-top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:14px;padding:14px 28px;background:rgba(246,249,253,.9);backdrop-filter:blur(8px);border-bottom:1px solid #dbe7f3}
 .dash[data-theme="dark"] .dash-top{background:rgba(11,18,32,.9);border-color:#1e293b}
+.dash-title{min-width:0;flex-shrink:0}
+.dash-title h1{font-size:20px;margin:0;color:#081a3d;white-space:nowrap}
 .dash-top h1{font-size:20px;margin:0;color:#081a3d}
 .dash[data-theme="dark"] .dash-top h1{color:#fff}
 .dash-top .crumb{font-size:12px;color:#5b6b82;margin:0}
-.dash-search{flex:1;max-width:420px;display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid #dbe7f3;border-radius:12px;padding:9px 14px}
+.dash-search{flex:1;max-width:420px;display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid #dbe7f3;border-radius:12px;padding:9px 14px;transition:border-color .2s ease,box-shadow .2s ease}
+.dash-search:focus-within{border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.15)}
 .dash[data-theme="dark"] .dash-search{background:#111c33;border-color:#1e293b}
 .dash-search input{border:0;outline:none;background:transparent;flex:1;font-size:14px;font-family:inherit;color:inherit}
-.dash-icon-btn{width:40px;height:40px;border-radius:50%;border:1.5px solid #dbe7f3;background:#fff;cursor:pointer;font-size:16px;color:#334155;position:relative;flex-shrink:0}
+.dash-icon-btn{width:40px;height:40px;border-radius:50%;border:1.5px solid #dbe7f3;background:#fff;cursor:pointer;font-size:16px;color:#334155;position:relative;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .2s ease,color .2s ease,border-color .2s ease,transform .2s ease}
+.dash-icon-btn:hover{border-color:#0ea5e9;color:#0284c7;transform:scale(1.08);box-shadow:0 6px 16px rgba(14,165,233,.18)}
+.dash-icon-btn svg{transition:transform .25s ease}
+.dash-icon-btn:hover svg{transform:scale(1.12)}
+.dash-top-link{text-decoration:none}
 .dash[data-theme="dark"] .dash-icon-btn{background:#111c33;border-color:#1e293b;color:#e2e8f0}
 .dash-icon-btn .dot{position:absolute;top:8px;right:9px;width:8px;height:8px;border-radius:50%;background:#ef4444;border:2px solid #fff}
 .dash-role{display:flex;background:#e2e8f0;border-radius:10px;padding:3px;flex-shrink:0}
@@ -69,7 +83,14 @@
 .dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
 .dash-grid.two{grid-template-columns:repeat(2,1fr)}
 .dash-grid.three{grid-template-columns:repeat(3,1fr)}
-.dash-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:20px;box-shadow:0 4px 16px rgba(8,26,61,.05)}
+.dash-card{background:#fff;border:1px solid #e6edf5;border-radius:20px;padding:22px;box-shadow:0 4px 18px rgba(8,26,61,.05);transition:transform .25s ease,box-shadow .25s ease}
+.dash-card:hover{box-shadow:0 14px 34px rgba(8,26,61,.1)}
+.stat{position:relative;overflow:hidden}
+.stat:hover{transform:translateY(-3px)}
+.stat::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#0ea5e9,#38bdf8,#081a3d);opacity:0;transition:opacity .25s ease}
+.stat:hover::after{opacity:1}
+.stat-ico{position:absolute;top:18px;right:18px;width:44px;height:44px;border-radius:13px;background:#e0f2fe;color:#0284c7;display:flex;align-items:center;justify-content:center;transition:transform .25s ease,background .25s ease,color .25s ease}
+.stat:hover .stat-ico{transform:scale(1.1) rotate(-4deg);background:#0ea5e9;color:#fff}
 .dash[data-theme="dark"] .dash-card{background:#111c33;border-color:#1e293b}
 .dash-card h3{margin:0 0 4px;font-size:15px;color:#081a3d}
 .dash[data-theme="dark"] .dash-card h3{color:#fff}
@@ -164,6 +185,7 @@
   .dash-side.collapsed .b-name,.dash-side.collapsed .b-sub,.dash-side.collapsed .dash-nav h5,.dash-side.collapsed .dash-nav a span.lbl,.dash-side.collapsed .dash-side-foot .who{display:block}
   .dash-side.collapsed .dash-nav a{justify-content:flex-start;padding:11px 12px}
   .dash-backdrop{display:block;position:fixed;inset:0;background:rgba(8,26,61,.5);z-index:35}
+  .dash-collapse-float{display:none}
   .dash-menu-btn{display:flex}
   .dash-top{padding:12px 16px;flex-wrap:wrap}
   .dash-search{order:3;flex-basis:100%;max-width:none}
