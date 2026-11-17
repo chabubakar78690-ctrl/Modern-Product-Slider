@@ -132,7 +132,7 @@ function AuthModal({ mode, onClose, onSwitch }) {
         </form>
         <button className="auth-sso" type="button" onClick={() => setAttempted(true)}>Continue with SSO</button>
         {attempted && (
-          <p className="auth-note">Account sign-in is not connected yet — this is the front-end of the popup. Connecting Google, Apple, Facebook and email sign-in is the next step.</p>
+          <p className="auth-note">Account sign-in is not connected yet — this is the front-end of the popup. Connecting Google, Apple, Facebook and email sign-in is the next step. Meanwhile you can explore the <a href="/dashboard" style={{ color: '#1d4ed8', fontWeight: 600 }}>dashboard demo →</a></p>
         )}
         <p className="auth-terms">By continuing, you agree to our Terms of Service and Privacy Policy.</p>
         </div>
@@ -178,6 +178,7 @@ export default function Home() {
             <a href="#pricing" onClick={() => setMenuOpen(false)}>Pricing</a>
             <a href="#how" onClick={() => setMenuOpen(false)}>How it works</a>
             <a href="#faq" onClick={() => setMenuOpen(false)}>FAQ</a>
+            <a href="/dashboard" onClick={() => setMenuOpen(false)}>Dashboard</a>
           </nav>
           <div className="nav-actions">
             <button className="btn ghost small" type="button" onClick={() => setAuthMode('login')}>Log in</button>
