@@ -27,6 +27,31 @@ export default function BillingPage() {
     setDone(`Sandbox test payment ${id} completed via PayFast (${money(plan.price)}). Your ${plan.name} plan is now active and your license has been re-activated. In production, PayFast confirms this through the ITN webhook — never from the redirect alone.`);
   };
 
+  const startCheckout = async () => {
+    // Real checkout: the server builds the signed PayFast form, then the
+    // browser posts it to PayFast's sandbox. Falls back to the simulation
+    // below when not signed in / backend unavailable.
+    try {
+      const res = await fetch('/api/payfast/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ planId: plan.id }) });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.action && d.fields) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = d.action;
+        Object.entries(d.fields).forEach(([k, v]) => {
+          const input = document.createElement('input');
+          input.type = 'hidden'; input.name = k; input.value = String(v);
+          form.appendChild(input);
+        });
+        document.body.appendChild(form);
+        form.submit();
+        return;
+      }
+      if (res.status === 401) setDone('Please sign in first (use the Log in button on the website), then try the checkout again.');
+    } catch {}
+    setCheckout(true);
+  };
+
   return (
     <>
       {done && <p className="dash-note green">{done}</p>}
@@ -59,7 +84,7 @@ export default function BillingPage() {
               ))}
             </div>
             <div style={{ marginTop: 18, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <button className="dash-btn navy" onClick={() => setCheckout(true)}>Pay {money(plan.price)} with PayFast {pf.sandbox ? '(Sandbox)' : ''}</button>
+              <button className="dash-btn navy" onClick={startCheckout}>Pay {money(plan.price)} with PayFast {pf.sandbox ? '(Sandbox)' : ''}</button>
               <span style={{ fontSize: 13, color: '#5b6b82', alignSelf: 'center' }}>Secure checkout on payfast.co.za · cards, EFT &amp; more</span>
             </div>
           </div>

@@ -91,6 +91,8 @@ const SOCIALS = [
 function AuthModal({ mode, onClose, onSwitch }) {
   const [showAll, setShowAll] = useState(false);
   const [attempted, setAttempted] = useState(false);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
   const isLogin = mode === 'login';
   const visibleSocials = showAll ? SOCIALS : SOCIALS.slice(0, 2);
 
@@ -100,6 +102,37 @@ function AuthModal({ mode, onClose, onSwitch }) {
     document.body.style.overflow = 'hidden';
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
   }, [onClose]);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    const form = e.target;
+    const body = {
+      email: form.querySelector('#auth-email').value,
+      password: form.querySelector('#auth-password').value,
+    };
+    if (!isLogin) body.name = form.querySelector('#auth-name')?.value || '';
+    try {
+      const res = await fetch(`/api/auth/${isLogin ? 'login' : 'signup'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Sign-in failed');
+      window.location.href = '/dashboard';
+    } catch (err) {
+      setError(err.message);
+      setAttempted(true);
+    } finally { setBusy(false); }
+  };
+
+  const social = async (id) => {
+    if (id === 'apple') { setError('Sign in with Apple needs an Apple Developer key — not set up yet. Use Google or email for now.'); setAttempted(true); return; }
+    if (id === 'passkey') { setError('Passkeys are not wired up yet — use Google or email for now.'); setAttempted(true); return; }
+    try {
+      const res = await fetch(`/api/auth/${id}`);
+      if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.error || `${id} sign-in is not configured yet.`); }
+      window.location.href = `/api/auth/${id}`;
+    } catch (err) { setError(err.message); setAttempted(true); }
+  };
 
   return (
     <div className="auth-overlay" onClick={onClose}>
@@ -115,12 +148,12 @@ function AuthModal({ mode, onClose, onSwitch }) {
         </div>
         <div className="auth-social">
           {visibleSocials.map((s) => (
-            <button key={s.id} type="button" onClick={() => setAttempted(true)}><span className="auth-ico">{s.icon}</span>{s.label}</button>
+            <button key={s.id} type="button" onClick={() => social(s.id)}><span className="auth-ico">{s.icon}</span>{s.label}</button>
           ))}
         </div>
         <button className="auth-more" type="button" onClick={() => setShowAll(!showAll)}>{showAll ? 'Less options' : 'More options'}</button>
         <div className="auth-or">OR</div>
-        <form onSubmit={(e) => { e.preventDefault(); setAttempted(true); }}>
+        <form onSubmit={submit}>
           {!isLogin && (
             <div className="auth-field"><label htmlFor="auth-name">Full name</label><input id="auth-name" type="text" placeholder="Your name" autoComplete="name" /></div>
           )}
@@ -128,10 +161,11 @@ function AuthModal({ mode, onClose, onSwitch }) {
             <div className="auth-field"><label htmlFor="auth-email">Email</label><input id="auth-email" type="email" placeholder="Email" autoComplete="email" required /></div>
             <div className="auth-field"><label htmlFor="auth-password">Password</label><input id="auth-password" type="password" placeholder="Password" autoComplete={isLogin ? 'current-password' : 'new-password'} required minLength={6} /></div>
           </div>
-          <button className="auth-submit" type="submit">Continue</button>
+          <button className="auth-submit" type="submit" disabled={busy}>{busy ? 'Please wait…' : 'Continue'}</button>
         </form>
-        <button className="auth-sso" type="button" onClick={() => setAttempted(true)}>Continue with SSO</button>
-        {attempted && (
+        <button className="auth-sso" type="button" onClick={() => { setError('SSO is not set up yet — use Google or email for now.'); setAttempted(true); }}>Continue with SSO</button>
+        {error && <p className="auth-note" style={{ background: '#fef2f2', borderColor: '#fecaca', color: '#b91c1c' }}>{error}</p>}
+        {attempted && !error && (
           <p className="auth-note">Account sign-in is not connected yet — this is the front-end of the popup. Connecting Google, Apple, Facebook and email sign-in is the next step. Meanwhile you can explore the <a href="/dashboard" style={{ color: '#1d4ed8', fontWeight: 600 }}>dashboard demo →</a></p>
         )}
         <p className="auth-terms">By continuing, you agree to our Terms of Service and Privacy Policy.</p>

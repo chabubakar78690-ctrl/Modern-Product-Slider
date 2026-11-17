@@ -20,12 +20,25 @@ export default function LicensesPage() {
   const myLicenses = isAdmin ? data.licenses : data.licenses.filter((l) => l.domain === 'saras-fashion.com');
   const myPlan = data.plans.find((p) => p.id === plan) || data.plans[1];
 
-  const connectDomain = (e) => {
+  const connectDomain = async (e) => {
     e.preventDefault();
     const clean = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
     if (!clean || !clean.includes('.')) { setMsg('Please enter a valid domain, e.g. mystore.com'); return; }
     const existing = data.licenses.find((l) => l.domain === clean);
     if (existing) { setMsg(`This domain already has a license (${existing.key}). Activate that key in WordPress instead.`); return; }
+    // Try the real backend first; fall back to the local demo store.
+    try {
+      const res = await fetch('/api/licenses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ domain: clean, planId: plan }) });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.license) {
+        const lic = { ...d.license, lastCheck: d.license.last_check || '—', created: d.license.created_at };
+        setMsg(`License created for ${clean} (saved on the server). Copy the key below and paste it in WordPress → Modern Product Slider → License.`);
+        setDomain('');
+        update((s) => ({ ...s, licenses: [lic, ...s.licenses] }));
+        return;
+      }
+      if (res.status === 401) { setMsg('Please sign in first (use the Log in button on the website), then create the license.'); return; }
+    } catch {}
     const key = newKey();
     update((d) => ({ ...d, licenses: [{ id: 'LIC-' + Math.floor(1000 + Math.random() * 9000), key, plan: myPlan.name, domain: clean, status: 'Active', sites: 1, version: '2.1.0', created: new Date().toISOString().slice(0, 10), lastCheck: '—' }, ...d.licenses] }));
     setMsg(`License created for ${clean}. Copy the key below and paste it in WordPress → Modern Product Slider → License.`);

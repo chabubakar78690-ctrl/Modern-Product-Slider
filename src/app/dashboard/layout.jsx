@@ -37,6 +37,7 @@ export default function DashboardLayout({ children }) {
     setTheme(window.localStorage.getItem('mps-theme') || 'light');
     window.localStorage.setItem('mps-role', 'admin');
     setStore(loadStore());
+    fetch('/api/auth/me').then((r) => r.json()).then((d) => { if (d.user) setStore((s) => ({ ...s, profile: { ...s.profile, name: d.user.name, email: d.user.email } })); }).catch(() => {});
     const onStore = () => setStore(loadStore());
     window.addEventListener('mps-store', onStore);
     return () => window.removeEventListener('mps-store', onStore);

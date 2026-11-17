@@ -1,0 +1,140 @@
+// Auth API — email/password + Google / Facebook OAuth.
+// POST /api/auth/signup   {name, email, password}  -> creates account, sets session
+// POST /api/auth/login    {email, password}        -> sets session
+// POST /api/auth/logout                          -> clears session
+// GET  /api/auth/me                              -> current session user
+// GET  /api/auth/google | /api/auth/facebook     -> start OAuth
+// GET  /api/auth/google/callback | /api/auth/facebook/callback -> finish OAuth
+// OAuth needs the keys from Admin > Settings > Social login (or env vars
+// GOOGLE_CLIENT_ID/SECRET, FACEBOOK_APP_ID/SECRET). Without them the
+// provider routes return 503 with a clear message.
+import { NextResponse } from 'next/server';
+import { getDb, getSettings, isDemoMode } from '../../lib/db';
+import { hashPassword, checkPassword, createSession, readSession, sessionCookie, clearSessionCookie, json } from '../../lib/auth';
+
+export const dynamic = 'force-dynamic';
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'chabubakar78690@gmail.com').toLowerCase();
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://modern-product-slider.vercel.app';
+
+async function findOrCreateOAuthUser(db, { email, name, provider }) {
+  let user = await db.find('users', 'email', email.toLowerCase());
+  if (user) return user;
+  user = await db.insert('users', {
+    id: 'u-' + Date.now().toString(36),
+    name, email: email.toLowerCase(), password_hash: '',
+    role: email.toLowerCase() === ADMIN_EMAIL ? 'admin' : 'customer',
+    provider, created_at: new Date().toISOString().slice(0, 10),
+  });
+  return user;
+}
+
+function oauthConfig(settings, provider) {
+  const cfg = settings.oauth?.[provider] || {};
+  const envId = provider === 'google' ? process.env.GOOGLE_CLIENT_ID : process.env.FACEBOOK_APP_ID;
+  const envSecret = provider === 'google' ? process.env.GOOGLE_CLIENT_SECRET : process.env.FACEBOOK_APP_SECRET;
+  return {
+    clientId: cfg.clientId || envId || '',
+    clientSecret: cfg.clientSecret || envSecret || '',
+    redirect: cfg.redirect || `${SITE}/api/auth/${provider}/callback`,
+    enabled: cfg.enabled,
+  };
+}
+
+export async function POST(req, { params }) {
+  const action = params.action?.[0];
+  const db = getDb();
+
+  if (action === 'signup' || action === 'login') {
+    const body = await req.json().catch(() => ({}));
+    const email = String(body.email || '').trim().toLowerCase();
+    const password = String(body.password || '');
+    if (!email.includes('@') || password.length < 6) {
+      return json({ error: 'Enter a valid email and a password of at least 6 characters.' }, 400);
+    }
+    if (action === 'signup') {
+      const name = String(body.name || email.split('@')[0]).trim();
+      let user = await db.find('users', 'email', email);
+      if (user && user.password_hash) return json({ error: 'An account with this email already exists. Log in instead.' }, 409);
+      if (user) {
+        // Claim a seeded/demo account by setting its password.
+        user = await db.update('users', 'email', email, { password_hash: hashPassword(password), name });
+      } else {
+        user = await db.insert('users', {
+          id: 'u-' + Date.now().toString(36), name, email, password_hash: hashPassword(password),
+          role: email === ADMIN_EMAIL ? 'admin' : 'customer', provider: 'email',
+          created_at: new Date().toISOString().slice(0, 10),
+        });
+      }
+      const res = json({ ok: true, demo: isDemoMode(), user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+      res.headers.set('Set-Cookie', sessionCookie(createSession(user)));
+      return res;
+    }
+    const user = await db.find('users', 'email', email);
+    if (!user || !user.password_hash || !checkPassword(password, user.password_hash)) {
+      return json({ error: 'Wrong email or password. If this is a demo account, sign up with the same email first to set a password.' }, 401);
+    }
+    const res = json({ ok: true, demo: isDemoMode(), user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+    res.headers.set('Set-Cookie', sessionCookie(createSession(user)));
+    return res;
+  }
+
+  if (action === 'logout') {
+    const res = json({ ok: true });
+    res.headers.set('Set-Cookie', clearSessionCookie());
+    return res;
+  }
+
+  return json({ error: 'Unknown auth action' }, 404);
+}
+
+export async function GET(req, { params }) {
+  const action = params.action?.[0];
+  const sub = params.action?.[1];
+  const db = getDb();
+
+  if (action === 'me') {
+    const s = readSession(req);
+    if (!s) return json({ user: null }, 401);
+    return json({ user: { id: s.uid, name: s.name, email: s.email, role: s.role }, demo: isDemoMode() });
+  }
+
+  if ((action === 'google' || action === 'facebook') && !sub) {
+    const settings = await getSettings();
+    const cfg = oauthConfig(settings, action);
+    if (!cfg.clientId) {
+      return json({ error: `${action} sign-in is not configured yet. Add the Client ID and Secret in Admin > Settings > Social login (or set the env vars).` }, 503);
+    }
+    const url = action === 'google'
+      ? `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(cfg.clientId)}&redirect_uri=${encodeURIComponent(cfg.redirect)}&response_type=code&scope=${encodeURIComponent('openid email profile')}`
+      : `https://www.facebook.com/v19.0/dialog/oauth?client_id=${encodeURIComponent(cfg.clientId)}&redirect_uri=${encodeURIComponent(cfg.redirect)}&scope=email,public_profile`;
+    return NextResponse.redirect(url);
+  }
+
+  if ((action === 'google' || action === 'facebook') && sub === 'callback') {
+    const settings = await getSettings();
+    const cfg = oauthConfig(settings, action);
+    const code = new URL(req.url).searchParams.get('code');
+    if (!code) return NextResponse.redirect(`${SITE}/?auth=error`);
+    try {
+      let profile;
+      if (action === 'google') {
+        const tok = await (await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ code, client_id: cfg.clientId, client_secret: cfg.clientSecret, redirect_uri: cfg.redirect, grant_type: 'authorization_code' }) })).json();
+        if (!tok.access_token) throw new Error('Google token exchange failed');
+        profile = await (await fetch('https://openidconnect.googleapis.com/v1/userinfo', { headers: { Authorization: `Bearer ${tok.access_token}` } })).json();
+      } else {
+        const tok = await (await fetch(`https://graph.facebook.com/v19.0/oauth/access_token?client_id=${cfg.clientId}&redirect_uri=${encodeURIComponent(cfg.redirect)}&client_secret=${cfg.clientSecret}&code=${code}`)).json();
+        if (!tok.access_token) throw new Error('Facebook token exchange failed');
+        profile = await (await fetch(`https://graph.facebook.com/me?fields=id,name,email&access_token=${tok.access_token}`)).json();
+      }
+      if (!profile.email) throw new Error('No email returned by provider');
+      const user = await findOrCreateOAuthUser(db, { email: profile.email, name: profile.name, provider: action });
+      const res = NextResponse.redirect(`${SITE}/dashboard`);
+      res.headers.set('Set-Cookie', sessionCookie(createSession(user)));
+      return res;
+    } catch (e) {
+      return NextResponse.redirect(`${SITE}/?auth=error&detail=${encodeURIComponent(e.message)}`);
+    }
+  }
+
+  return json({ error: 'Unknown auth action' }, 404);
+}
