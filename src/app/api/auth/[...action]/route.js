@@ -44,6 +44,7 @@ export async function POST(req, { params }) {
   const action = params.action?.[0];
   const db = getDb();
 
+  try {
   if (action === 'signup' || action === 'login') {
     const body = await req.json().catch(() => ({}));
     const email = String(body.email || '').trim().toLowerCase();
@@ -85,6 +86,10 @@ export async function POST(req, { params }) {
   }
 
   return json({ error: 'Unknown auth action' }, 404);
+  } catch (e) {
+    console.error('Auth error:', e);
+    return json({ error: e.message || 'Auth failed' }, 500);
+  }
 }
 
 export async function GET(req, { params }) {
