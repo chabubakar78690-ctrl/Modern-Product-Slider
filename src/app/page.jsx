@@ -196,6 +196,13 @@ export default function Home() {
   const [authMode, setAuthMode] = useState(null);
   useReveal();
 
+  // The dashboard sends signed-out visitors here with ?auth=login so the
+  // login popup opens straight away.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('auth');
+    if (q === 'login' || q === 'signup') setAuthMode(q);
+  }, []);
+
   return (
     <>
       {authMode && <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onSwitch={setAuthMode} />}

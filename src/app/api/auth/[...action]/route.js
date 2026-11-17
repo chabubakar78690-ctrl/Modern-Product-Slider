@@ -13,16 +13,17 @@ import { getDb, getSettings, isDemoMode } from '../../lib/db';
 import { hashPassword, checkPassword, createSession, readSession, sessionCookie, clearSessionCookie, json } from '../../lib/auth';
 
 export const dynamic = 'force-dynamic';
-const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'chabubakar78690@gmail.com').toLowerCase();
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://modern-product-slider.vercel.app';
 
 async function findOrCreateOAuthUser(db, { email, name, provider }) {
   let user = await db.find('users', 'email', email.toLowerCase());
   if (user) return user;
+  // Signups always create a customer. There is exactly one admin account —
+  // the one already set — and it is never created through signup.
   user = await db.insert('users', {
     id: 'u-' + Date.now().toString(36),
     name, email: email.toLowerCase(), password_hash: '',
-    role: email.toLowerCase() === ADMIN_EMAIL ? 'admin' : 'customer',
+    role: 'customer',
     provider, created_at: new Date().toISOString().slice(0, 10),
   });
   return user;
@@ -62,7 +63,7 @@ export async function POST(req, { params }) {
       } else {
         user = await db.insert('users', {
           id: 'u-' + Date.now().toString(36), name, email, password_hash: hashPassword(password),
-          role: email === ADMIN_EMAIL ? 'admin' : 'customer', provider: 'email',
+          role: 'customer', provider: 'email',
           created_at: new Date().toISOString().slice(0, 10),
         });
       }
@@ -99,7 +100,7 @@ export async function GET(req, { params }) {
 
   if (action === 'me') {
     const s = readSession(req);
-    if (!s) return json({ user: null }, 401);
+    if (!s) return json({ user: null, demo: isDemoMode() }, 401);
     return json({ user: { id: s.uid, name: s.name, email: s.email, role: s.role }, demo: isDemoMode() });
   }
 
