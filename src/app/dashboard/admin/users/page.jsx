@@ -2,13 +2,27 @@
 
 import { useState } from 'react';
 import { useDashboard } from '../../lib/useStore';
+import Loader, { BtnSpinner } from '../../lib/Loader';
 
 export default function UsersPage() {
-  const { data, update } = useDashboard();
+  const { data, update, serverLoading } = useDashboard();
   const [q, setQ] = useState('');
+  const [busy, setBusy] = useState('');
   const rows = data.users.filter((u) => (u.name + u.email + u.plan).toLowerCase().includes(q.toLowerCase()));
 
-  const toggle = (email) => update((d) => ({ ...d, users: d.users.map((u) => u.email === email ? { ...u, status: u.status === 'Active' ? 'Expired' : 'Active' } : u) }));
+  const toggle = async (email, current) => {
+    const next = current === 'Active' ? 'Expired' : 'Active';
+    setBusy(email);
+    try {
+      const res = await fetch('/api/admin/users', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, status: next }) });
+      if (!res.ok) throw new Error('server save failed');
+    } catch {
+      // Demo mode (no server): keep the change locally only.
+    } finally { setBusy(''); }
+    update((d) => ({ ...d, users: d.users.map((u) => u.email === email ? { ...u, status: next } : u) }));
+  };
+
+  if (serverLoading) return <Loader text="Loading customers…" />;
 
   return (
     <div className="dash-card">
@@ -20,7 +34,7 @@ export default function UsersPage() {
             <td><b>{u.name}</b><br /><span style={{ color: '#5b6b82', fontSize: 13 }}>{u.email}</span></td>
             <td>{u.plan}</td><td>{u.licenses}</td><td>{u.joined}</td>
             <td><span className={`badge ${u.status === 'Active' ? 'green' : 'red'}`}>{u.status}</span></td>
-            <td><button className="dash-btn ghost sm" onClick={() => toggle(u.email)}>{u.status === 'Active' ? 'Suspend' : 'Reactivate'}</button></td>
+            <td><button className="dash-btn ghost sm" disabled={busy === u.email} onClick={() => toggle(u.email, u.status)}>{busy === u.email ? <><BtnSpinner />Saving…</> : (u.status === 'Active' ? 'Suspend' : 'Reactivate')}</button></td>
           </tr>
         ))}
       </tbody></table></div>

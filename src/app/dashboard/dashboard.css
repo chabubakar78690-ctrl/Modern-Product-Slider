@@ -196,3 +196,11 @@
   .dash-table-wrap{overflow-x:auto}
   .dash-table{min-width:640px}
 }
+
+/* Shared loader — logo mark + spinner ring */
+.mps-loader{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:60vh;color:#5b6b82;font-size:14px}
+.mps-loader img{width:44px;height:44px}
+.mps-loader p{margin:0}
+.mps-spin{width:34px;height:34px;border-radius:50%;border:3px solid #e0f2fe;border-top-color:#0284c7;animation:mps-spin .8s linear infinite}
+@keyframes mps-spin{to{transform:rotate(360deg)}}
+.btn-spin{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;animation:mps-spin .7s linear infinite;vertical-align:-2px;margin-right:6px}

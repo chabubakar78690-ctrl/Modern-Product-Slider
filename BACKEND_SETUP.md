@@ -16,10 +16,14 @@ switches to the real database automatically once Supabase is connected.
 | `POST /api/license/verify` · `POST /api/license/deactivate` | Public API the WordPress plugin calls |
 | `POST /api/payfast/checkout` | Signed PayFast checkout form (signature built server-side) |
 | `POST /api/payfast/itn` | PayFast ITN webhook — 4 security checks, then activates the license |
-| `GET /api/download?key=…&domain=…` | License-gated Pro ZIP download |
-| `GET /api/admin/overview|users|payments|pricing|settings` | Admin data (admin session only) |
+| `GET /api/download?key=…&domain=…` | License-gated Pro ZIP download (streams the file, never a public link) |
+| `GET /api/admin/overview|users|payments|pricing|settings|versions` | Admin data (admin session only) |
 | `PUT /api/admin/pricing` · `PUT /api/admin/settings` | Save pricing / OAuth + PayFast keys |
+| `PUT /api/admin/users {email, status}` | Suspend / reactivate a customer (needs `migration-add-user-status.sql`) |
+| `PUT /api/admin/account {name?, email?, password?}` | Update the one fixed admin account (password hashed server-side) |
+| `POST /api/admin/versions {version, file, notes?}` | Publish a new Pro version |
 | `GET /api/plugin` | Public latest-version info for the WordPress update checker |
+| `GET /api/pricing` | Public plans — the landing page reads its prices from here |
 
 ## Step 1 — Supabase (free) for the real database
 
@@ -38,12 +42,17 @@ Vercel Dashboard → Project → Settings → Environment Variables → add:
 
 - `SUPABASE_URL` — from step 1
 - `SUPABASE_SERVICE_ROLE_KEY` — from step 1
-- `SESSION_SECRET` — any long random string
-- `ADMIN_EMAIL` — `chabubakar78690@gmail.com` (first signup with this
-  email becomes the admin)
+- `SESSION_SECRET` — **required**. Any long random string (generate one with
+  `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`).
+  Without it, login/signup refuse to run in production — sessions are
+  HMAC-signed with this secret, and a missing secret would let anyone forge
+  a session.
 - `NEXT_PUBLIC_SITE_URL` — `https://modern-product-slider.vercel.app`
 
 Then redeploy (Deployments → ⋯ → Redeploy).
+
+> Signups always create **customers**. There is exactly one admin account —
+> the one already in the database. Nobody becomes admin by signing up.
 
 ## Step 3 — Google / Facebook login (optional)
 
@@ -74,7 +83,12 @@ details. The ITN notify URL is
 
 ## Step 5 — Pro ZIP uploads
 
-Admin → Downloads → upload a version. The file itself must also exist in
-`public/downloads/` in the repo (e.g.
-`public/downloads/modern-product-slider-pro-2.1.0.zip`) — that is what
-`/api/download` serves after checking the license.
+Admin → Downloads → publish a version. The file itself must also exist in
+the private `downloads/` folder in the repo (e.g.
+`downloads/modern-product-slider-pro-2.1.0.zip`) — that is what
+`/api/download` streams after checking the license. The folder is not
+public, so the ZIP link cannot be shared around.
+
+If you also want the admin to suspend / reactivate customers from the
+dashboard, run `supabase/migration-add-user-status.sql` in the SQL Editor
+(it adds the `status` column to the users table).

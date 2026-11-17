@@ -25,6 +25,11 @@ export async function POST(req, { params }) {
     return json({ ok: true, valid: false, status: 'Expired' });
   }
 
+  if (action === 'activate') {
+    await db.update('licenses', 'key', key, { status: 'Active' });
+    return json({ ok: true, valid: true, status: 'Active' });
+  }
+
   if (action === 'verify') {
     if (license.status !== 'Active') return json({ valid: false, status: license.status, error: 'License is not active' }, 403);
     await db.update('licenses', 'key', key, { last_check: new Date().toISOString().slice(0, 16).replace('T', ' ') });

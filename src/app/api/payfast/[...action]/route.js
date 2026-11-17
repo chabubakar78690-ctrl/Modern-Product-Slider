@@ -48,10 +48,11 @@ export async function POST(req, { params }) {
 
     // Check 1 — signature.
     const sigOk = await verifyItnSignature(form, sandbox ? '' : (payfast.passphrase || ''));
-    // Check 2 — source IP.
+    // Check 2 — source IP. Fail closed: if PayFast's hostnames cannot be
+    // resolved, the check fails rather than silently passing.
     const forwarded = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
     const payfastIps = await resolvePayfastHosts();
-    const ipOk = !forwarded || payfastIps.length === 0 || payfastIps.includes(forwarded);
+    const ipOk = !forwarded || (payfastIps.length > 0 && payfastIps.includes(forwarded));
     // Check 3 — server confirmation.
     const confirmed = await confirmWithPayfast(form, sandbox);
     // Check 4 — merchant + amount match a plan.

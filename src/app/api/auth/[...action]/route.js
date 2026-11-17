@@ -15,6 +15,20 @@ import { hashPassword, checkPassword, createSession, readSession, sessionCookie,
 export const dynamic = 'force-dynamic';
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://modern-product-slider.vercel.app';
 
+// Brute-force guard: max 10 login/signup attempts per IP per 10 minutes.
+// (Per-instance memory — on serverless it resets when an instance recycles,
+// but it still stops casual password guessing.)
+const attempts = new Map();
+function rateLimited(req) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const now = Date.now();
+  const list = (attempts.get(ip) || []).filter((t) => now - t < 10 * 60 * 1000);
+  if (list.length >= 10) return true;
+  list.push(now);
+  attempts.set(ip, list);
+  return false;
+}
+
 async function findOrCreateOAuthUser(db, { email, name, provider }) {
   let user = await db.find('users', 'email', email.toLowerCase());
   if (user) return user;
@@ -47,6 +61,7 @@ export async function POST(req, { params }) {
 
   try {
   if (action === 'signup' || action === 'login') {
+    if (rateLimited(req)) return json({ error: 'Too many attempts. Please wait 10 minutes and try again.' }, 429);
     const body = await req.json().catch(() => ({}));
     const email = String(body.email || '').trim().toLowerCase();
     const password = String(body.password || '');

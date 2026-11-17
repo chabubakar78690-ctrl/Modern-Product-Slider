@@ -20,10 +20,6 @@ export const PAYFAST_SANDBOX_MERCHANT_ID = '10000100';
 export const PAYFAST_SANDBOX_MERCHANT_KEY = '46f0cd694581a';
 export const PAYFAST_VALIDATE_URL = 'https://sandbox.payfast.co.za/eng/query/validate';
 
-const PAYFAST_IPS = new Set([
-  '197.242.144.0/24', // placeholder range — real check resolves the hostnames below
-]);
-
 export function buildSignature(fields, passphrase = '') {
   const str = Object.keys(fields)
     .filter((k) => fields[k] !== undefined && fields[k] !== '' && k !== 'signature')

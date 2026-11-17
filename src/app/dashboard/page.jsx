@@ -3,13 +3,18 @@
 import Link from 'next/link';
 import { DollarSign, Users, KeyRound, TrendingUp } from 'lucide-react';
 import { useDashboard, money } from './lib/useStore';
+import Loader from './lib/Loader';
 
 export default function DashboardHome() {
-  const { data, role } = useDashboard();
+  const { data, role, serverLoading } = useDashboard();
   const isAdmin = role === 'admin';
   const activeLicenses = data.licenses.filter((l) => l.status === 'Active');
   const revenue = data.payments.filter((p) => p.status === 'Completed').reduce((s, p) => s + p.amount, 0);
   const mrr = data.users.filter((u) => u.status === 'Active' && u.plan !== 'Free').reduce((s, u) => s + (u.plan === 'Unlimited Sites' ? 10 : 3), 0);
+  const myLicense = activeLicenses[0];
+  const myPlan = data.plans.find((p) => p.name === (myLicense?.plan || data.customer.planName)) || data.plans.find((p) => p.id === 'single');
+
+  if (serverLoading) return <Loader text="Loading your dashboard…" />;
 
   return (
     <>
@@ -23,9 +28,9 @@ export default function DashboardHome() {
       ) : (
         <div className="dash-grid">
           <div className="dash-card stat"><div className="s-label">Your plan</div><div className="s-num" style={{ fontSize: 22 }}>{data.customer.planName}</div><div className="s-sub">Renews {data.customer.renews}</div></div>
-          <div className="dash-card stat"><div className="s-label">License status</div><div className="s-num" style={{ fontSize: 22 }}>{data.customer.status}</div><div className="s-sub">1 active license</div></div>
-          <div className="dash-card stat"><div className="s-label">Connected domain</div><div className="s-num" style={{ fontSize: 18 }}>saras-fashion.com</div><div className="s-sub">Plugin v2.1.0 installed</div></div>
-          <div className="dash-card stat"><div className="s-label">Next payment</div><div className="s-num">{money(3)}/mo</div><div className="s-sub">Via PayFast · {data.customer.renews}</div></div>
+          <div className="dash-card stat"><div className="s-label">License status</div><div className="s-num" style={{ fontSize: 22 }}>{data.customer.status}</div><div className="s-sub">{activeLicenses.length} active license{activeLicenses.length === 1 ? '' : 's'}</div></div>
+          <div className="dash-card stat"><div className="s-label">Connected domain</div><div className="s-num" style={{ fontSize: 18 }}>{myLicense ? myLicense.domain : 'No domain connected'}</div><div className="s-sub">Plugin v{myLicense ? myLicense.version : '2.1.0'} installed</div></div>
+          <div className="dash-card stat"><div className="s-label">Next payment</div><div className="s-num">{money(myPlan?.price || 0)}/mo</div><div className="s-sub">Via PayFast · {data.customer.renews}</div></div>
         </div>
       )}
 
@@ -40,8 +45,14 @@ export default function DashboardHome() {
             </tbody></table></div>
           ) : (
             <>
-              <p>Your Pro license is active on <b>saras-fashion.com</b>. Only stores with an active license receive plugin updates from WordPress.</p>
-              <div className="dash-license-key" style={{ marginTop: 14 }}><span>MPS-9F3K-28XD-71QZ</span><span className="badge green">Active</span></div>
+              {myLicense ? (
+                <>
+                  <p>Your Pro license is active on <b>{myLicense.domain}</b>. Only stores with an active license receive plugin updates from WordPress.</p>
+                  <div className="dash-license-key" style={{ marginTop: 14 }}><span>{myLicense.key}</span><span className="badge green">Active</span></div>
+                </>
+              ) : (
+                <p>You have no active license yet. Connect your WordPress domain on the Licenses page to get one.</p>
+              )}
               <div style={{ marginTop: 16, display: 'flex', gap: 10 }}><Link className="dash-btn blue sm" href="/dashboard/licenses">Manage license</Link><Link className="dash-btn ghost sm" href="/dashboard/downloads">Download Pro ZIP</Link></div>
             </>
           )}

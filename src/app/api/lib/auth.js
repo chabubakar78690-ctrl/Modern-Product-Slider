@@ -3,7 +3,18 @@
 import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 
-const SECRET = process.env.SESSION_SECRET || 'dev-only-secret-change-me-in-production';
+const SECRET = process.env.SESSION_SECRET;
+// Security: sessions are HMAC-signed with this secret. If it is missing in
+// production, auth fails closed instead of signing with a guessable default
+// (anyone who knows a default secret could forge an admin session).
+if (!SECRET && process.env.NODE_ENV === 'production') {
+  console.error('SESSION_SECRET is not set — auth is disabled until it is configured in Vercel env vars.');
+}
+
+export function requireSecret() {
+  if (!SECRET) throw new Error('SESSION_SECRET is not configured on the server. Add it in Vercel → Settings → Environment Variables, then redeploy.');
+  return SECRET;
+}
 const COOKIE = 'mps_session';
 
 export function hashPassword(password) {
@@ -24,14 +35,15 @@ function b64url(obj) {
 }
 
 export function createSession(user) {
+  const secret = requireSecret();
   const payload = b64url({ uid: user.id, email: user.email, role: user.role || 'customer', name: user.name, exp: Date.now() + 1000 * 60 * 60 * 24 * 30 });
-  const sig = crypto.createHmac('sha256', SECRET).update(payload).digest('base64url');
+  const sig = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
   return `${payload}.${sig}`;
 }
 
 export function readSession(req) {
   const raw = req.cookies?.get(COOKIE)?.value;
-  if (!raw) return null;
+  if (!raw || !SECRET) return null;
   const [payload, sig] = raw.split('.');
   if (!payload || !sig) return null;
   const expect = crypto.createHmac('sha256', SECRET).update(payload).digest('base64url');

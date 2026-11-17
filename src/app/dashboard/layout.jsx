@@ -10,6 +10,7 @@ import {
 import './dashboard.css';
 import { loadStore } from './lib/store';
 import { useSession } from './lib/useStore';
+import Loader from './lib/Loader';
 
 // One fixed admin account. Everyone who signs up is a customer; the admin
 // section below only renders for the signed-in admin.
@@ -60,7 +61,7 @@ export default function DashboardLayout({ children }) {
   };
 
   if (session.loading) {
-    return <div className="dash" data-theme={theme}><div className="dash-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: '#5b6b82' }}>Checking your session…</div></div>;
+    return <div className="dash" data-theme={theme}><Loader text="Checking your session…" /></div>;
   }
   if (!session.user && !session.demo) return null;
 

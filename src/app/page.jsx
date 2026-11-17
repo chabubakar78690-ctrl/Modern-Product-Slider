@@ -1,6 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { BtnSpinner } from './dashboard/lib/Loader';
+
+const DEFAULT_PLANS = [
+  { id: 'free', name: 'Free', price: 0, sites: '1 site', desc: 'For trying Modern Product Slider on your store.', features: ['Limited product sliders', 'Responsive slider layouts', 'Shortcode & Gutenberg block', 'Community support'] },
+  { id: 'single', name: 'Single Site', price: 3, sites: '1 site', desc: 'Ideal for a single WooCommerce storefront.', features: ['Activate on 1 WordPress Site', 'Unlimited Product Sliders', 'Unlimited Products Per Rack', 'Instant Pro Add-On ZIP Download', 'Cancel Anytime from Dashboard'] },
+  { id: 'unlimited', name: 'Unlimited Sites', price: 10, sites: 'Unlimited sites', desc: 'Built for agencies, studios & multi-brand owners.', features: ['Activate on Unlimited Sites', 'Unlimited Product Sliders', 'Unlimited Products Per Rack', 'Instant Pro Add-On ZIP Download', 'Priority Developer Support'] },
+];
 
 const FAQS = [
   { q: 'What is the difference between Free and Pro?', a: 'Free gives you beautiful product sliders for your WooCommerce store with a limited number of sliders. Pro unlocks unlimited sliders, unlimited products per rack, instant Pro Add-On ZIP download, and priority developer support.' },
@@ -161,7 +168,7 @@ function AuthModal({ mode, onClose, onSwitch }) {
             <div className="auth-field"><label htmlFor="auth-email">Email</label><input id="auth-email" type="email" placeholder="Email" autoComplete="email" required /></div>
             <div className="auth-field"><label htmlFor="auth-password">Password</label><input id="auth-password" type="password" placeholder="Password" autoComplete={isLogin ? 'current-password' : 'new-password'} required minLength={6} /></div>
           </div>
-          <button className="auth-submit" type="submit" disabled={busy}>{busy ? 'Please wait…' : 'Continue'}</button>
+          <button className="auth-submit" type="submit" disabled={busy}>{busy ? <><BtnSpinner />Please wait…</> : 'Continue'}</button>
         </form>
         <button className="auth-sso" type="button" onClick={() => { setError('SSO is not set up yet — use Google or email for now.'); setAttempted(true); }}>Continue with SSO</button>
         {error && <p className="auth-note" style={{ background: '#fef2f2', borderColor: '#fecaca', color: '#b91c1c' }}>{error}</p>}
@@ -194,7 +201,14 @@ function Accordion({ items }) {
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [authMode, setAuthMode] = useState(null);
+  const [plans, setPlans] = useState(DEFAULT_PLANS);
   useReveal();
+
+  // Prices come from the server (/api/pricing) so an admin price change in
+  // the dashboard shows up here too. Falls back to the built-in prices.
+  useEffect(() => {
+    fetch('/api/pricing').then((r) => (r.ok ? r.json() : null)).then((d) => { if (d?.plans?.length) setPlans(d.plans); }).catch(() => {});
+  }, []);
 
   // The dashboard sends signed-out visitors here with ?auth=login so the
   // login popup opens straight away.
@@ -235,45 +249,20 @@ export default function Home() {
             <h2>Start free. Upgrade when your store grows.</h2>
             <p className="lead">No surprise costs. Cancel anytime from your dashboard.</p>
             <div className="plans">
-              <div className="plan">
-                <h3>Free</h3>
-                <div className="big">$0<small>/forever</small></div>
-                <p>For trying Modern Product Slider on your store.</p>
-                <ul>
-                  <li>Limited product sliders</li>
-                  <li>Responsive slider layouts</li>
-                  <li>Shortcode &amp; Gutenberg block</li>
-                  <li>Community support</li>
-                </ul>
-                <a className="btn ghost" href="#how">Download Free</a>
-              </div>
-              <div className="plan">
-                <h3>Single Site</h3>
-                <div className="big">$3<small>/month</small></div>
-                <p>Ideal for a single WooCommerce storefront.</p>
-                <ul>
-                  <li>Activate on <b>1 WordPress Site</b></li>
-                  <li><b>Unlimited</b> Product Sliders</li>
-                  <li><b>Unlimited</b> Products Per Rack</li>
-                  <li>Instant Pro Add-On ZIP Download</li>
-                  <li>Cancel Anytime from Dashboard</li>
-                </ul>
-                <a className="btn" href="#faq">Get Single Site ($3/mo) →</a>
-              </div>
-              <div className="plan featured">
-                <span className="badge">★ Best Value</span>
-                <h3>Unlimited Sites</h3>
-                <div className="big">$10<small>/month</small></div>
-                <p>Built for agencies, studios &amp; multi-brand owners.</p>
-                <ul>
-                  <li>Activate on <b>Unlimited Sites</b></li>
-                  <li><b>Unlimited</b> Product Sliders</li>
-                  <li><b>Unlimited</b> Products Per Rack</li>
-                  <li>Instant Pro Add-On ZIP Download</li>
-                  <li>Priority Developer Support</li>
-                </ul>
-                <a className="btn sky" href="#faq">Get Unlimited Plan ($10/mo) →</a>
-              </div>
+              {plans.map((p) => (
+                <div key={p.id} className={p.id === 'unlimited' ? 'plan featured' : 'plan'}>
+                  {p.id === 'unlimited' && <span className="badge">★ Best Value</span>}
+                  <h3>{p.name}</h3>
+                  <div className="big">${p.price}<small>{p.price === 0 ? '/forever' : '/month'}</small></div>
+                  <p>{p.desc}</p>
+                  <ul>
+                    {p.features.map((f, i) => <li key={i}>{f}</li>)}
+                  </ul>
+                  {p.price === 0
+                    ? <a className="btn ghost" href="#how">Download Free</a>
+                    : <a className={p.id === 'unlimited' ? 'btn sky' : 'btn'} href="#faq">Get {p.name} (${p.price}/mo) →</a>}
+                </div>
+              ))}
             </div>
           </div>
         </section>

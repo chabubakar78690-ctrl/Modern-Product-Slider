@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadStore, saveStore, SEED } from './store';
 
 // The signed-in session, fetched once from the server and cached.
@@ -21,11 +21,28 @@ export function useSession() {
   return s;
 }
 
+// Map server rows to the shape the dashboard pages render.
+function mapLicense(l) {
+  return { id: l.id, key: l.key, user_email: l.user_email, plan: l.plan, domain: l.domain, status: l.status, sites: 1, version: l.version, created: l.created_at, lastCheck: l.last_check || '—' };
+}
+function mapPayment(p) {
+  return { id: String(p.id), date: p.created_at, user: p.user_email, plan: p.plan, amount: Number(p.amount || 0), method: p.method, status: p.status };
+}
+function planIdFor(name) {
+  if (name === 'Unlimited Sites') return 'unlimited';
+  if (name === 'Single Site') return 'single';
+  return 'free';
+}
+
 export function useDashboard() {
   const [data, setData] = useState(SEED);
   const [ready, setReady] = useState(false);
+  const [serverLoading, setServerLoading] = useState(false);
   const session = useSession();
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
 
+  // Local demo store (used when there is no signed-in user, i.e. demo mode).
   useEffect(() => {
     setData(loadStore());
     setReady(true);
@@ -34,14 +51,80 @@ export function useDashboard() {
     return () => window.removeEventListener('mps-store', onStore);
   }, []);
 
+  // Real data: when signed in, replace the demo seed with the server's
+  // data. Any fetch that fails leaves the demo data in place.
+  const refreshServer = useCallback(async () => {
+    const s = sessionRef.current;
+    if (!s.user) return;
+    setServerLoading(true);
+    try {
+      const [licRes, pluginRes] = await Promise.all([
+        fetch('/api/licenses').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch('/api/plugin').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      ]);
+      let next = null;
+      const licenses = (licRes?.licenses || []).map(mapLicense);
+      const versions = pluginRes ? [{ version: pluginRes.latest_version, date: pluginRes.date, file: pluginRes.file, size: pluginRes.size, current: true, notes: pluginRes.notes }] : null;
+      if (s.user.role === 'admin') {
+        const [usersRes, payRes, ovRes, setRes] = await Promise.all([
+          fetch('/api/admin/users').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+          fetch('/api/admin/payments').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+          fetch('/api/admin/overview').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+          fetch('/api/admin/settings').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        ]);
+        const users = (usersRes?.users || []).map((u) => {
+          const mine = licenses.filter((l) => l.user_email === u.email);
+          const plan = mine.length ? mine[mine.length - 1].plan : 'Free';
+          return { name: u.name, email: u.email, plan, status: u.status || 'Active', joined: u.created_at, licenses: mine.length };
+        });
+        next = (prev) => ({
+          ...prev,
+          licenses: licenses.length ? licenses : prev.licenses,
+          users: users.length ? users : prev.users,
+          payments: (payRes?.payments || []).map(mapPayment),
+          versions: ovRes?.versions?.length ? ovRes.versions : (versions || prev.versions),
+          settings: setRes ? { oauth: setRes.oauth || prev.settings.oauth, payfast: setRes.payfast || prev.settings.payfast } : prev.settings,
+          profile: { ...prev.profile, name: s.user.name, email: s.user.email },
+        });
+      } else {
+        const active = licenses.find((l) => l.status === 'Active');
+        next = (prev) => ({
+          ...prev,
+          licenses: licenses.length ? licenses : prev.licenses,
+          versions: versions || prev.versions,
+          customer: {
+            ...prev.customer,
+            name: s.user.name, email: s.user.email,
+            plan: active ? planIdFor(active.plan) : 'free',
+            planName: active ? active.plan : 'Free',
+            status: active ? 'Active' : 'Free',
+            renews: prev.customer.renews,
+          },
+        });
+      }
+      if (next) setData((prev) => next(prev));
+    } finally {
+      setServerLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!session.loading && session.user) refreshServer();
+  }, [session.loading, session.user, refreshServer]);
+
+  // Local edits (demo mode, or optimistic updates after a server call).
+  // In real mode the server is the source of truth; local writes only
+  // happen when nobody is signed in.
   const update = useCallback((fn) => {
-    const next = fn(loadStore());
-    saveStore(next);
-    setData(next);
+    setData((prev) => {
+      const next = fn(prev);
+      if (!sessionRef.current.user) saveStore(next);
+      return next;
+    });
   }, []);
 
   const role = session.user?.role || 'customer';
-  return { data, ready, update, role, session };
+  return { data, ready, update, role, session, serverLoading, refreshServer };
 }
 
 export function useRole() {

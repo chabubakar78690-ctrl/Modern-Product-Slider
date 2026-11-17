@@ -275,3 +275,13 @@ button.btn{font-family:inherit;cursor:pointer}
 .auth-sso{display:block;margin:16px auto 0;border:0;background:none;color:var(--blue);font-size:14px;cursor:pointer;font-family:inherit}
 .auth-note{margin-top:14px;padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;color:#1d4ed8;font-size:13px;line-height:1.5}
 .auth-terms{margin:18px 0 0;text-align:center;color:var(--muted);font-size:12px;line-height:1.6}
+
+/* Full-page loader (route transitions) */
+.site-loader{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.site-loader .mps-loader{min-height:0}
+.mps-loader{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#5b6b82;font-size:14px}
+.mps-loader img{width:44px;height:44px}
+.mps-loader p{margin:0}
+.mps-spin{width:34px;height:34px;border-radius:50%;border:3px solid #e0f2fe;border-top-color:#0284c7;animation:mps-spin .8s linear infinite}
+@keyframes mps-spin{to{transform:rotate(360deg)}}
+.btn-spin{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;animation:mps-spin .7s linear infinite;vertical-align:-2px;margin-right:6px}

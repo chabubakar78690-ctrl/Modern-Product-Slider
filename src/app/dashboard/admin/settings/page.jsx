@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDashboard } from '../../lib/useStore';
 import { PAYFAST } from '../../lib/store';
+import { BtnSpinner } from '../../lib/Loader';
 
 const PROVIDERS = [
   { id: 'google', name: 'Google', hint: 'Google Cloud Console → APIs & Services → Credentials → OAuth client ID (Web application).' },
@@ -11,7 +12,7 @@ const PROVIDERS = [
 ];
 
 export default function SettingsPage() {
-  const { data, update } = useDashboard();
+  const { data, update, session } = useDashboard();
   const [tab, setTab] = useState('social');
   const [saved, setSaved] = useState('');
   const [showSecrets, setShowSecrets] = useState(false);
@@ -20,10 +21,53 @@ export default function SettingsPage() {
   const [adminName, setAdminName] = useState(data.profile.name);
   const [adminEmail, setAdminEmail] = useState(data.profile.email);
   const [adminPass, setAdminPass] = useState('');
+  const [busy, setBusy] = useState('');
 
-  const saveSocial = () => { update((d) => ({ ...d, settings: { ...d.settings, oauth } })); setSaved('Social login keys saved. These are used by the server to run Google / Facebook / Apple sign-in — never expose the secrets in the browser in production.'); };
-  const savePayfast = () => { update((d) => ({ ...d, settings: { ...d.settings, payfast } })); setSaved('PayFast settings saved. ' + (payfast.sandbox ? 'Sandbox mode is ON — test payments use the sandbox credentials.' : 'Live mode is ON — real payments will be charged. Double-check the merchant ID and passphrase.')); };
-  const saveAdmin = () => { update((d) => ({ ...d, profile: { ...d.profile, name: adminName, email: adminEmail } })); setSaved('Admin account updated. This is the one fixed admin account for the dashboard.'); };
+  // Load the keys from the server (they live in the database, not the browser).
+  useEffect(() => {
+    fetch('/api/admin/settings').then((r) => (r.ok ? r.json() : null)).then((d) => {
+      if (!d) return;
+      if (d.oauth) setOauth(d.oauth);
+      if (d.payfast) setPayfast(d.payfast);
+    }).catch(() => {});
+  }, []);
+
+  const putSettings = async (body) => {
+    try {
+      const res = await fetch('/api/admin/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      return res.ok;
+    } catch { return false; }
+  };
+
+  const saveSocial = async () => {
+    setBusy('social');
+    const ok = await putSettings({ oauth });
+    update((d) => ({ ...d, settings: { ...d.settings, oauth } }));
+    setSaved(ok ? 'Social login keys saved on the server. The login popup now uses them for Google / Facebook / Apple sign-in.' : 'Saved locally only — the server could not be reached. Check the connection and save again.');
+    setBusy('');
+  };
+  const savePayfast = async () => {
+    setBusy('payfast');
+    const ok = await putSettings({ payfast });
+    update((d) => ({ ...d, settings: { ...d.settings, payfast } }));
+    setSaved(ok ? 'PayFast settings saved on the server. ' + (payfast.sandbox ? 'Sandbox mode is ON — test payments use the sandbox credentials.' : 'Live mode is ON — real payments will be charged. Double-check the merchant ID and passphrase.') : 'Saved locally only — the server could not be reached. Check the connection and save again.');
+    setBusy('');
+  };
+  const saveAdmin = async () => {
+    if (adminPass && adminPass.length < 8) { setSaved('New password must be at least 8 characters.'); return; }
+    setBusy('account');
+    try {
+      const res = await fetch('/api/admin/account', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: adminName, email: adminEmail, password: adminPass || undefined }) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || 'save failed');
+      update((dta) => ({ ...dta, profile: { ...dta.profile, name: adminName, email: adminEmail } }));
+      setSaved('Admin account updated on the server. This is the one fixed admin account for the dashboard.');
+      setAdminPass('');
+    } catch (e) {
+      update((d) => ({ ...d, profile: { ...d.profile, name: adminName, email: adminEmail } }));
+      setSaved('Saved locally only — the server could not be reached (' + e.message + ').');
+    } finally { setBusy(''); }
+  };
   const fillSandbox = () => setPayfast((p) => ({ ...p, sandbox: true, merchantId: PAYFAST.sandboxMerchantId, merchantKey: PAYFAST.sandboxMerchantKey, passphrase: '' }));
 
   const mask = (v) => showSecrets ? v : (v ? '••••••••' + v.slice(-4) : '');
@@ -40,7 +84,7 @@ export default function SettingsPage() {
       {tab === 'social' && (
         <div className="dash-card">
           <h3>Login with Google, Facebook &amp; Apple</h3>
-          <p style={{ marginBottom: 16 }}>These keys power the &ldquo;Continue with Google / Facebook / Apple&rdquo; buttons in the login popup. Enter the keys from each provider&apos;s developer console. Client secrets must live on the server — this demo stores them locally only.</p>
+          <p style={{ marginBottom: 16 }}>These keys power the &ldquo;Continue with Google / Facebook / Apple&rdquo; buttons in the login popup. Enter the keys from each provider&apos;s developer console. Client secrets are stored on the server (database) and never in the browser.</p>
           {PROVIDERS.map((prov) => (
             <div key={prov.id} style={{ borderTop: '1px solid #f1f5f9', paddingTop: 16, marginTop: 16 }}>
               <div className="toggle-row">
@@ -55,7 +99,7 @@ export default function SettingsPage() {
             </div>
           ))}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button className="dash-btn blue" onClick={saveSocial}>Save social login keys</button>
+            <button className="dash-btn blue" onClick={saveSocial} disabled={busy === 'social'}>{busy === 'social' ? <><BtnSpinner />Saving…</> : 'Save social login keys'}</button>
             <button className="dash-btn ghost" onClick={() => setShowSecrets(!showSecrets)}>{showSecrets ? 'Hide secrets' : 'Show secrets'}</button>
           </div>
         </div>
@@ -81,7 +125,7 @@ export default function SettingsPage() {
           </div>
           <p className="dash-note amber">Live PayFast merchant accounts are for South African businesses — a live account needs South African business and bank details. Use sandbox mode to test the full checkout flow from anywhere.</p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button className="dash-btn blue" onClick={savePayfast}>Save PayFast settings</button>
+            <button className="dash-btn blue" onClick={savePayfast} disabled={busy === 'payfast'}>{busy === 'payfast' ? <><BtnSpinner />Saving…</> : 'Save PayFast settings'}</button>
             <button className="dash-btn ghost" onClick={fillSandbox}>Fill sandbox test credentials</button>
             <button className="dash-btn ghost" onClick={() => setShowSecrets(!showSecrets)}>{showSecrets ? 'Hide secrets' : 'Show secrets'}</button>
           </div>
@@ -91,13 +135,13 @@ export default function SettingsPage() {
       {tab === 'account' && (
         <div className="dash-card">
           <h3>Admin account</h3>
-          <p style={{ marginBottom: 16 }}>There is one fixed admin account for this dashboard. Change the name, email or password here — it updates the sidebar, the topbar avatar and the Profile page. (In production the password change is verified server-side.)</p>
+          <p style={{ marginBottom: 16 }}>There is one fixed admin account for this dashboard. Change the name, email or password here — it updates on the server and in your session. (Password changes are hashed server-side.)</p>
           <div className="dash-row">
             <div className="dash-field"><label htmlFor="aname">Admin name</label><input id="aname" value={adminName} onChange={(e) => setAdminName(e.target.value)} /></div>
             <div className="dash-field"><label htmlFor="aemail">Admin email</label><input id="aemail" type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} /></div>
           </div>
           <div className="dash-field"><label htmlFor="apass">New password</label><input id="apass" type="password" value={adminPass} onChange={(e) => setAdminPass(e.target.value)} placeholder="Leave blank to keep the current password" /><p className="hint">Use at least 8 characters with a mix of letters and numbers.</p></div>
-          <button className="dash-btn blue" onClick={saveAdmin}>Save admin account</button>
+          <button className="dash-btn blue" onClick={saveAdmin} disabled={busy === 'account'}>{busy === 'account' ? <><BtnSpinner />Saving…</> : 'Save admin account'}</button>
         </div>
       )}
     </>

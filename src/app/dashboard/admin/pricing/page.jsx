@@ -1,15 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDashboard, money } from '../../lib/useStore';
+import Loader, { BtnSpinner } from '../../lib/Loader';
 
 export default function PricingPage() {
-  const { data, update } = useDashboard();
+  const { data, update, serverLoading } = useDashboard();
   const [plans, setPlans] = useState(data.plans);
   const [saved, setSaved] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/admin/pricing').then((r) => (r.ok ? r.json() : null)).then((d) => { if (d?.plans?.length) setPlans(d.plans); }).catch(() => {});
+  }, []);
 
   const set = (id, field, value) => setPlans((ps) => ps.map((p) => p.id === id ? { ...p, [field]: field === 'price' ? Number(value) || 0 : value } : p));
-  const save = () => { update((d) => ({ ...d, plans })); setSaved('Pricing saved. The Billing page and checkout now use these prices. (The landing page prices are updated in the next step.)'); };
+  const save = async () => {
+    setBusy(true);
+    let ok = false;
+    try {
+      const res = await fetch('/api/admin/pricing', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plans }) });
+      ok = res.ok;
+    } catch {}
+    update((d) => ({ ...d, plans }));
+    setSaved(ok ? 'Pricing saved on the server. The Billing page, checkout and the landing page now use these prices.' : 'Saved locally only — the server could not be reached. Check the connection and save again.');
+    setBusy(false);
+  };
+
+  if (serverLoading) return <Loader text="Loading pricing…" />;
 
   return (
     <>
@@ -26,7 +44,7 @@ export default function PricingPage() {
           </div>
         ))}
       </div>
-      <button className="dash-btn blue" onClick={save}>Save pricing</button>
+      <button className="dash-btn blue" onClick={save} disabled={busy}>{busy ? <><BtnSpinner />Saving…</> : 'Save pricing'}</button>
     </>
   );
 }
