@@ -22,8 +22,9 @@ export default function PricingPage() {
       const res = await fetch('/api/admin/pricing', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plans }) });
       ok = res.ok;
     } catch {}
+    if (!ok) { setSaved('Could not reach the server — pricing was not saved. Check the connection and save again.'); setBusy(false); return; }
     update((d) => ({ ...d, plans }));
-    setSaved(ok ? 'Pricing saved on the server. The Billing page, checkout and the landing page now use these prices.' : 'Saved locally only — the server could not be reached. Check the connection and save again.');
+    setSaved('Pricing saved on the server. The Billing page, checkout and the landing page now use these prices.');
     setBusy(false);
   };
 

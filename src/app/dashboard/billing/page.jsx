@@ -6,7 +6,7 @@ import { PAYFAST } from '../lib/store';
 import Loader, { BtnSpinner } from '../lib/Loader';
 
 export default function BillingPage() {
-  const { data, update, serverLoading } = useDashboard();
+  const { data, update, serverLoading, session } = useDashboard();
   const role = useRole();
   const isAdmin = role === 'admin';
   const [selected, setSelected] = useState('unlimited');
@@ -31,8 +31,8 @@ export default function BillingPage() {
 
   const startCheckout = async () => {
     // Real checkout: the server builds the signed PayFast form, then the
-    // browser posts it to PayFast. Falls back to the simulation below only
-    // when the server checkout is unavailable (demo mode / not signed in).
+    // browser posts it to PayFast. The simulation below only exists in demo
+    // mode — signed-in customers always go through the real checkout.
     setBusy(true);
     try {
       const res = await fetch('/api/payfast/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ planId: plan.id }) });
@@ -51,9 +51,12 @@ export default function BillingPage() {
         return;
       }
       if (res.status === 401) setDone('Please sign in first (use the Log in button on the website), then try the checkout again.');
-    } catch {}
+      else setDone(d.error || 'Checkout could not be started. Please try again.');
+    } catch {
+      setDone('Could not reach the server. Please try again.');
+    }
     setBusy(false);
-    setCheckout(true);
+    if (session.demo) setCheckout(true);
   };
 
   if (serverLoading) return <Loader text="Loading billing…" />;

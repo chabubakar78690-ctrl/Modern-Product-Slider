@@ -44,7 +44,8 @@ export default function LicensesPage() {
       setMsg(d.error || 'Could not create the license. Please try again.');
       return;
     } catch {
-      // Demo mode (no server): create the key locally only.
+      if (!session.demo) { setMsg('Could not reach the server. Please try again.'); return; }
+      // Demo mode only (nobody signed in): create the key locally.
       const key = newKey();
       update((d) => ({ ...d, licenses: [{ id: 'LIC-' + Math.floor(1000 + Math.random() * 9000), key, plan: myPlan.name, domain: clean, status: 'Active', sites: 1, version: '2.1.0', created: new Date().toISOString().slice(0, 10), lastCheck: '—' }, ...d.licenses] }));
       setMsg(`License created for ${clean}. Copy the key below and paste it in WordPress → Modern Product Slider → License.`);
@@ -58,6 +59,7 @@ export default function LicensesPage() {
       const res = await fetch(`/api/license/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: lic.key, domain: lic.domain }) });
       if (res.ok) { await refreshServer(); return; }
     } catch {}
+    if (!session.demo) return;
     update((d) => ({ ...d, licenses: d.licenses.map((l) => l.id === lic.id ? { ...l, status } : l) }));
   };
   const copy = async (key) => { try { await navigator.clipboard.writeText(key); } catch {} setCopied(key); setTimeout(() => setCopied(''), 2000); };

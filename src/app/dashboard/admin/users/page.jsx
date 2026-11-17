@@ -5,7 +5,7 @@ import { useDashboard } from '../../lib/useStore';
 import Loader, { BtnSpinner } from '../../lib/Loader';
 
 export default function UsersPage() {
-  const { data, update, serverLoading } = useDashboard();
+  const { data, update, serverLoading, session } = useDashboard();
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState('');
   const rows = data.users.filter((u) => (u.name + u.email + u.plan).toLowerCase().includes(q.toLowerCase()));
@@ -16,10 +16,11 @@ export default function UsersPage() {
     try {
       const res = await fetch('/api/admin/users', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, status: next }) });
       if (!res.ok) throw new Error('server save failed');
+      update((d) => ({ ...d, users: d.users.map((u) => u.email === email ? { ...u, status: next } : u) }));
     } catch {
-      // Demo mode (no server): keep the change locally only.
+      // Demo mode only: keep the change locally.
+      if (session.demo) update((d) => ({ ...d, users: d.users.map((u) => u.email === email ? { ...u, status: next } : u) }));
     } finally { setBusy(''); }
-    update((d) => ({ ...d, users: d.users.map((u) => u.email === email ? { ...u, status: next } : u) }));
   };
 
   if (serverLoading) return <Loader text="Loading customers…" />;

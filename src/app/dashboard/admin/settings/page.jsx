@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useDashboard } from '../../lib/useStore';
 import { PAYFAST } from '../../lib/store';
-import { BtnSpinner } from '../../lib/Loader';
+import Loader, { BtnSpinner } from '../../lib/Loader';
 
 const PROVIDERS = [
   { id: 'google', name: 'Google', hint: 'Google Cloud Console → APIs & Services → Credentials → OAuth client ID (Web application).' },
@@ -12,7 +12,7 @@ const PROVIDERS = [
 ];
 
 export default function SettingsPage() {
-  const { data, update, session } = useDashboard();
+  const { data, update, session, serverLoading } = useDashboard();
   const [tab, setTab] = useState('social');
   const [saved, setSaved] = useState('');
   const [showSecrets, setShowSecrets] = useState(false);
@@ -39,18 +39,20 @@ export default function SettingsPage() {
     } catch { return false; }
   };
 
+  if (serverLoading) return <Loader text="Loading settings…" />;
+
   const saveSocial = async () => {
     setBusy('social');
     const ok = await putSettings({ oauth });
     update((d) => ({ ...d, settings: { ...d.settings, oauth } }));
-    setSaved(ok ? 'Social login keys saved on the server. The login popup now uses them for Google / Facebook / Apple sign-in.' : 'Saved locally only — the server could not be reached. Check the connection and save again.');
+    setSaved(ok ? 'Social login keys saved on the server. The login popup now uses them for Google / Facebook / Apple sign-in.' : 'Could not reach the server — keys were not saved. Check the connection and save again.');
     setBusy('');
   };
   const savePayfast = async () => {
     setBusy('payfast');
     const ok = await putSettings({ payfast });
     update((d) => ({ ...d, settings: { ...d.settings, payfast } }));
-    setSaved(ok ? 'PayFast settings saved on the server. ' + (payfast.sandbox ? 'Sandbox mode is ON — test payments use the sandbox credentials.' : 'Live mode is ON — real payments will be charged. Double-check the merchant ID and passphrase.') : 'Saved locally only — the server could not be reached. Check the connection and save again.');
+    setSaved(ok ? 'PayFast settings saved on the server. ' + (payfast.sandbox ? 'Sandbox mode is ON — test payments use the sandbox credentials.' : 'Live mode is ON — real payments will be charged. Double-check the merchant ID and passphrase.') : 'Could not reach the server — settings were not saved. Check the connection and save again.');
     setBusy('');
   };
   const saveAdmin = async () => {
@@ -64,8 +66,7 @@ export default function SettingsPage() {
       setSaved('Admin account updated on the server. This is the one fixed admin account for the dashboard.');
       setAdminPass('');
     } catch (e) {
-      update((d) => ({ ...d, profile: { ...d.profile, name: adminName, email: adminEmail } }));
-      setSaved('Saved locally only — the server could not be reached (' + e.message + ').');
+      setSaved('Could not reach the server — admin account was not changed (' + e.message + ').');
     } finally { setBusy(''); }
   };
   const fillSandbox = () => setPayfast((p) => ({ ...p, sandbox: true, merchantId: PAYFAST.sandboxMerchantId, merchantKey: PAYFAST.sandboxMerchantKey, passphrase: '' }));

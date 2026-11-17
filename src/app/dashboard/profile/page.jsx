@@ -1,19 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDashboard, useRole } from '../lib/useStore';
 import { resetStore } from '../lib/store';
-import { BtnSpinner } from '../lib/Loader';
+import Loader, { BtnSpinner } from '../lib/Loader';
 
 export default function ProfilePage() {
-  const { data, update, session } = useDashboard();
+  const { data, update, session, serverLoading } = useDashboard();
   const role = useRole();
   const isAdmin = role === 'admin';
-  const me = isAdmin ? data.profile : data.customer;
+  const me = session.user ? { name: session.user.name, email: session.user.email } : (isAdmin ? data.profile : data.customer);
   const [name, setName] = useState(me.name);
   const [email, setEmail] = useState(me.email);
   const [saved, setSaved] = useState('');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (session.user) { setName(session.user.name); setEmail(session.user.email); }
+  }, [session.user]);
 
   const save = async (e) => {
     e.preventDefault();
@@ -22,12 +26,16 @@ export default function ProfilePage() {
       try {
         const res = await fetch('/api/admin/account', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email }) });
         if (!res.ok) throw new Error('server save failed');
-      } catch {}
+      } catch {
+        if (!session.demo) { setSaved('Could not reach the server — profile was not saved.'); setBusy(false); return; }
+      }
     }
     update((d) => isAdmin ? { ...d, profile: { ...d.profile, name, email } } : { ...d, customer: { ...d.customer, name, email } });
     setSaved('Profile saved.');
     setBusy(false);
   };
+
+  if (serverLoading) return <Loader text="Loading profile…" />;
 
   return (
     <div className="dash-grid two">

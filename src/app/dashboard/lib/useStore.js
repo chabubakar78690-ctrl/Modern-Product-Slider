@@ -77,10 +77,12 @@ export function useDashboard() {
           const plan = mine.length ? mine[mine.length - 1].plan : 'Free';
           return { name: u.name, email: u.email, plan, status: u.status || 'Active', joined: u.created_at, licenses: mine.length };
         });
+        // Signed in = server is the truth. Empty lists are real (a new
+        // account has no licenses/users) — never fall back to demo seed.
         next = (prev) => ({
           ...prev,
-          licenses: licenses.length ? licenses : prev.licenses,
-          users: users.length ? users : prev.users,
+          licenses,
+          users,
           payments: (payRes?.payments || []).map(mapPayment),
           versions: ovRes?.versions?.length ? ovRes.versions : (versions || prev.versions),
           settings: setRes ? { oauth: setRes.oauth || prev.settings.oauth, payfast: setRes.payfast || prev.settings.payfast } : prev.settings,
@@ -90,7 +92,7 @@ export function useDashboard() {
         const active = licenses.find((l) => l.status === 'Active');
         next = (prev) => ({
           ...prev,
-          licenses: licenses.length ? licenses : prev.licenses,
+          licenses,
           versions: versions || prev.versions,
           customer: {
             ...prev.customer,
@@ -98,7 +100,7 @@ export function useDashboard() {
             plan: active ? planIdFor(active.plan) : 'free',
             planName: active ? active.plan : 'Free',
             status: active ? 'Active' : 'Free',
-            renews: prev.customer.renews,
+            renews: active ? prev.customer.renews : '—',
           },
         });
       }

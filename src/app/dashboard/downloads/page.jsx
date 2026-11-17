@@ -5,7 +5,7 @@ import { useDashboard, useRole } from '../lib/useStore';
 import Loader, { BtnSpinner } from '../lib/Loader';
 
 export default function DownloadsPage() {
-  const { data, update, refreshServer, serverLoading } = useDashboard();
+  const { data, update, refreshServer, serverLoading, session } = useDashboard();
   const role = useRole();
   const isAdmin = role === 'admin';
   const myActive = data.licenses.find((l) => l.status === 'Active');
@@ -27,6 +27,7 @@ export default function DownloadsPage() {
       await refreshServer();
       setMsg(`Version ${version.trim()} published on the server. Stores with an active license will now see this update in WordPress. Remember: the ZIP file itself must also be in the downloads/ folder of the repo, or the download will 404.`);
     } catch (err) {
+      if (!session.demo) { setMsg('Could not publish on the server: ' + err.message); return; }
       update((d) => ({
         ...d,
         versions: [
